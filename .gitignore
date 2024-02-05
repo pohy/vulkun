@@ -3,3 +3,5 @@
 bin/
 !bin/.gitkeep
 .sconsign.dblite
+.cache
+compile_commands.json
