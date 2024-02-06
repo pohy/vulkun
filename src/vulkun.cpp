@@ -9,7 +9,6 @@
 
 #include <cassert>
 #include <chrono>
-#include <iostream>
 #include <thread>
 
 constexpr bool enable_validation_layers = true;
@@ -33,6 +32,8 @@ void Vulkun::init() {
 
 	_is_initialized = _init_vulkan();
 	_is_initialized = _init_swapchain();
+
+	fmt::print("Vulkun initialized: {}\n", _is_initialized);
 }
 
 bool Vulkun::_init_vulkan() {
@@ -46,8 +47,7 @@ bool Vulkun::_init_vulkan() {
 		.build();
 
 	if (!inst_ret) {
-		std::cerr << "Failed to create Vulkan instance. Error: " << inst_ret.error().message() << "\n";
-		std::cerr << "Result: " << inst_ret.vk_result() << "\n";
+		fmt::print(stderr, "Failed to create Vulkan instance. Error: {}\n", inst_ret.error().message().c_str());
 		return false;
 	}
 
