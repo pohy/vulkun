@@ -3,7 +3,9 @@
 int main() {
 	Vulkun vulkun;
 	vulkun.init();
-	vulkun.run();
+	if (vulkun.is_initialized()) {
+		vulkun.run();
+	}
 	vulkun.cleanup();
 
 	return 0;

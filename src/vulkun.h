@@ -11,6 +11,13 @@ class Vulkun {
 	VkExtent2D _window_extent = {1920, 1080};
 	struct SDL_Window *_window = nullptr;
 
+	VkInstance _instance;
+	VkDebugUtilsMessengerEXT _debug_messenger;
+	VkPhysicalDevice _physical_device;
+	VkDevice _device;
+	VkSurfaceKHR _surface;
+
+	bool _init_vulkan();
   public:
 	static Vulkun &get_singleton();
 
@@ -18,4 +25,6 @@ class Vulkun {
 	void run();
 	void draw();
 	void cleanup();
+
+	bool is_initialized() const { return _is_initialized; }
 };

@@ -4,10 +4,15 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 
+#define VK_KHR_portability_enumeration 1
+#include <VkBootstrap.h>
+
 #include <cassert>
 #include <chrono>
+#include <iostream>
 #include <thread>
 
+constexpr bool enable_validation_layers = true;
 Vulkun *singleton_instance = nullptr;
 
 Vulkun &Vulkun::get_singleton() {
@@ -26,7 +31,45 @@ void Vulkun::init() {
 
 	_window = SDL_CreateWindow("Vulkun", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, window_flags);
 
-	_is_initialized = true;
+	_is_initialized = _init_vulkan();
+}
+
+bool Vulkun::_init_vulkan() {
+	vkb::InstanceBuilder builder;
+
+	auto inst_ret = builder
+							.set_app_name("Vulkun")
+							.require_api_version(1, 2, 0)
+							.request_validation_layers(enable_validation_layers)
+							.use_default_debug_messenger()
+							.build();
+
+	if (!inst_ret) {
+		std::cerr << "Failed to create Vulkan instance. Error: " << inst_ret.error().message() << "\n";
+		std::cerr << "Result: " << inst_ret.vk_result() << "\n";
+		return false;
+	}
+
+	vkb::Instance vkb_inst = inst_ret.value();
+
+	_instance = vkb_inst.instance;
+	_debug_messenger = vkb_inst.debug_messenger;
+
+	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
+
+	vkb::PhysicalDeviceSelector selector(vkb_inst);
+	vkb::PhysicalDevice physical_device = selector
+												  .set_surface(_surface)
+												  .set_minimum_version(1, 2)
+												  .select()
+												  .value();
+	vkb::DeviceBuilder device_builder(physical_device);
+	vkb::Device vkb_device = device_builder.build().value();
+
+	_device = vkb_device.device;
+	_physical_device = physical_device.physical_device;
+
+	return true;
 }
 
 void Vulkun::run() {
