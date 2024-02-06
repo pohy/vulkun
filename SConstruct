@@ -2,7 +2,7 @@ env = Environment(
     CPPPATH=["/opt/homebrew/include", "third_party/vk-bootstrap/src"],
     LIBPATH=["/opt/homebrew/lib"],
     CXXFLAGS=["-std=c++17"],
-    LIBS=["SDL2"],
+    LIBS=["SDL2", "vulkan"],
 )
     
 

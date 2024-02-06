@@ -32,17 +32,18 @@ void Vulkun::init() {
 	_window = SDL_CreateWindow("Vulkun", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, window_flags);
 
 	_is_initialized = _init_vulkan();
+	_is_initialized = _init_swapchain();
 }
 
 bool Vulkun::_init_vulkan() {
 	vkb::InstanceBuilder builder;
 
 	auto inst_ret = builder
-							.set_app_name("Vulkun")
-							.require_api_version(1, 2, 0)
-							.request_validation_layers(enable_validation_layers)
-							.use_default_debug_messenger()
-							.build();
+		.set_app_name("Vulkun")
+		.require_api_version(1, 2, 0)
+		.request_validation_layers(enable_validation_layers)
+		.use_default_debug_messenger()
+		.build();
 
 	if (!inst_ret) {
 		std::cerr << "Failed to create Vulkan instance. Error: " << inst_ret.error().message() << "\n";
@@ -59,10 +60,10 @@ bool Vulkun::_init_vulkan() {
 
 	vkb::PhysicalDeviceSelector selector(vkb_inst);
 	vkb::PhysicalDevice physical_device = selector
-												  .set_surface(_surface)
-												  .set_minimum_version(1, 2)
-												  .select()
-												  .value();
+		  .set_surface(_surface)
+		  .set_minimum_version(1, 2)
+		  .select()
+		  .value();
 	vkb::DeviceBuilder device_builder(physical_device);
 	vkb::Device vkb_device = device_builder.build().value();
 
@@ -72,6 +73,22 @@ bool Vulkun::_init_vulkan() {
 	return true;
 }
 
+bool Vulkun::_init_swapchain() {
+	vkb::SwapchainBuilder swapchain_builder(_physical_device, _device, _surface);
+	vkb::Swapchain vkb_swapchain = swapchain_builder
+		.use_default_format_selection()
+		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+		.set_desired_extent(_window_extent.width, _window_extent.height)
+		.build()
+		.value();
+
+	_swapchain = vkb_swapchain.swapchain;
+	_swapchain_images = vkb_swapchain.get_images().value();
+	_swapchain_image_views = vkb_swapchain.get_image_views().value();
+	_swapchain_image_format = vkb_swapchain.image_format;
+
+	return true;
+}
 void Vulkun::run() {
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 	SDL_Window *window = SDL_CreateWindow("Vulkun", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, 0);
@@ -114,6 +131,15 @@ void Vulkun::draw() {}
 
 void Vulkun::cleanup() {
 	if (_is_initialized) {
+		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+		for (auto &image_view : _swapchain_image_views) {
+			vkDestroyImageView(_device, image_view, nullptr);
+		}
+		vkDestroyDevice(_device, nullptr);
+		vkDestroySurfaceKHR(_instance, _surface, nullptr);
+		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
+		vkDestroyInstance(_instance, nullptr);
+
 		SDL_DestroyWindow(_window);
 	}
 

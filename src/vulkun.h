@@ -17,7 +17,13 @@ class Vulkun {
 	VkDevice _device;
 	VkSurfaceKHR _surface;
 
+	VkSwapchainKHR _swapchain;
+	VkFormat _swapchain_image_format;
+	std::vector<VkImage> _swapchain_images;
+	std::vector<VkImageView> _swapchain_image_views;
+
 	bool _init_vulkan();
+	bool _init_swapchain();
   public:
 	static Vulkun &get_singleton();
 
