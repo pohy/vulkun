@@ -1,5 +1,6 @@
 #include "vulkun.h"
 #include "vk_types.h"
+#include "vk_initializers.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
@@ -32,6 +33,7 @@ void Vulkun::init() {
 
 	_is_initialized = _init_vulkan();
 	_is_initialized = _init_swapchain();
+	_is_initialized = _init_commands();
 
 	fmt::print("Vulkun initialized: {}\n", _is_initialized);
 }
@@ -70,6 +72,9 @@ bool Vulkun::_init_vulkan() {
 	_device = vkb_device.device;
 	_physical_device = physical_device.physical_device;
 
+	_graphics_queue = vkb_device.get_queue(vkb::QueueType::graphics).value();
+	_graphics_queue_family_idx = vkb_device.get_queue_index(vkb::QueueType::graphics).value();
+
 	return true;
 }
 
@@ -86,6 +91,15 @@ bool Vulkun::_init_swapchain() {
 	_swapchain_images = vkb_swapchain.get_images().value();
 	_swapchain_image_views = vkb_swapchain.get_image_views().value();
 	_swapchain_image_format = vkb_swapchain.image_format;
+
+	return true;
+}
+
+bool Vulkun::_init_commands() {
+	VkCommandPoolCreateInfo pool_info = vkinit::command_pool_create_info(_graphics_queue_family_idx);
+	VK_CHECK(vkCreateCommandPool(_device, &pool_info, nullptr, &_command_pool));
+	VkCommandBufferAllocateInfo cmd_alloc_info = vkinit::command_buffer_allocate_info(_command_pool);
+	VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_alloc_info, &_main_command_buffer));
 
 	return true;
 }
@@ -131,12 +145,16 @@ void Vulkun::draw() {}
 
 void Vulkun::cleanup() {
 	if (_is_initialized) {
+		vkDestroyCommandPool(_device, _command_pool, nullptr);
+
 		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
 		for (auto &image_view : _swapchain_image_views) {
 			vkDestroyImageView(_device, image_view, nullptr);
 		}
+
 		vkDestroyDevice(_device, nullptr);
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
+
 		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 		vkDestroyInstance(_instance, nullptr);
 
