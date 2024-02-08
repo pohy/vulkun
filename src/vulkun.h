@@ -2,6 +2,8 @@
 
 #include "vk_types.h"
 
+#define APP_NAME "Vulkun - ゔるくん"
+
 class Vulkun {
   private:
 	int _frame_number = 0;
@@ -30,11 +32,16 @@ class Vulkun {
 	VkRenderPass _render_pass;
 	std::vector<VkFramebuffer> _framebuffers;
 
+	VkSemaphore _present_semaphore, _render_semaphore;
+	VkFence _render_fence;
+
 	bool _init_vulkan();
 	bool _init_swapchain();
 	bool _init_commands();
 	bool _init_default_renderpass();
 	bool _init_framebuffers();
+	bool _init_sync_structures();
+
   public:
 	static Vulkun &get_singleton();
 

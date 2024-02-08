@@ -27,8 +27,8 @@ void Vulkun::init() {
 	// Initialize SDL
 	// TODO: SDL validations
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 
+	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 	_window = SDL_CreateWindow("Vulkun", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, window_flags);
 
 	_is_initialized = _init_vulkan();
@@ -36,6 +36,7 @@ void Vulkun::init() {
 	_is_initialized = _init_commands();
 	_is_initialized = _init_default_renderpass();
 	_is_initialized = _init_framebuffers();
+	_is_initialized = _init_sync_structures();
 
 	fmt::print("Vulkun initialized: {}\n", _is_initialized);
 }
@@ -44,7 +45,7 @@ bool Vulkun::_init_vulkan() {
 	vkb::InstanceBuilder builder;
 
 	auto inst_ret = builder
-							.set_app_name("Vulkun")
+							.set_app_name(APP_NAME)
 							.require_api_version(1, 2, 0)
 							.request_validation_layers(enable_validation_layers)
 							.use_default_debug_messenger()
@@ -60,7 +61,10 @@ bool Vulkun::_init_vulkan() {
 	_instance = vkb_inst.instance;
 	_debug_messenger = vkb_inst.debug_messenger;
 
-	SDL_Vulkan_CreateSurface(_window, _instance, &_surface);
+	if (!SDL_Vulkan_CreateSurface(_window, _instance, &_surface)) {
+		fmt::print(stderr, "Failed to create Vulkan surface.\n");
+		return false;
+	}
 
 	vkb::PhysicalDeviceSelector selector(vkb_inst);
 	vkb::PhysicalDevice physical_device = selector
@@ -98,9 +102,19 @@ bool Vulkun::_init_swapchain() {
 }
 
 bool Vulkun::_init_commands() {
-	VkCommandPoolCreateInfo pool_info = vkinit::command_pool_create_info(_graphics_queue_family_idx);
+	VkCommandPoolCreateInfo pool_info = {};
+	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	pool_info.pNext = nullptr;
+	pool_info.queueFamilyIndex = _graphics_queue_family_idx;
+	pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 	VK_CHECK(vkCreateCommandPool(_device, &pool_info, nullptr, &_command_pool));
-	VkCommandBufferAllocateInfo cmd_alloc_info = vkinit::command_buffer_allocate_info(_command_pool);
+
+	VkCommandBufferAllocateInfo cmd_alloc_info = {};
+	cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	cmd_alloc_info.pNext = nullptr;
+	cmd_alloc_info.commandPool = _command_pool;
+	cmd_alloc_info.commandBufferCount = 1;
+	cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_alloc_info, &_main_command_buffer));
 
 	return true;
@@ -128,6 +142,7 @@ bool Vulkun::_init_default_renderpass() {
 
 	VkRenderPassCreateInfo render_pass_info = {};
 	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	render_pass_info.pNext = nullptr;
 	render_pass_info.attachmentCount = 1;
 	render_pass_info.pAttachments = &color_attachment;
 	render_pass_info.subpassCount = 1;
@@ -158,9 +173,27 @@ bool Vulkun::_init_framebuffers() {
 	return true;
 }
 
+bool Vulkun::_init_sync_structures() {
+	VkFenceCreateInfo fence_info = {};
+	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fence_info.pNext = nullptr;
+	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+	VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_render_fence));
+
+	VkSemaphoreCreateInfo semaphore_info = {};
+	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+	semaphore_info.pNext = nullptr;
+
+	VK_CHECK(vkCreateSemaphore(_device, &semaphore_info, nullptr, &_present_semaphore));
+	VK_CHECK(vkCreateSemaphore(_device, &semaphore_info, nullptr, &_render_semaphore));
+
+	return true;
+}
+
 void Vulkun::run() {
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-	SDL_Window *window = SDL_CreateWindow("Vulkun", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, 0);
+	_window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, 0);
 
 	bool should_quit = false;
 	SDL_Event event;
@@ -187,16 +220,86 @@ void Vulkun::run() {
 			}
 		}
 
+		if (should_quit) {
+			break;
+		}
+
 		if (_is_rendering_paused) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			continue;
 		}
 
+		SDL_SetWindowTitle(_window, fmt::format("{} - Frame: {}", APP_NAME, _frame_number).c_str());
+
 		draw();
 	}
 }
 
-void Vulkun::draw() {}
+void Vulkun::draw() {
+	VK_CHECK(vkWaitForFences(_device, 1, &_render_fence, true, 1000000000));
+	VK_CHECK(vkResetFences(_device, 1, &_render_fence));
+
+	VK_CHECK(vkResetCommandBuffer(_main_command_buffer, 0));
+
+	uint32_t swapchain_image_index;
+	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, _present_semaphore, nullptr, &swapchain_image_index));
+
+	VkCommandBufferBeginInfo cmd_begin_info = {};
+	cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	cmd_begin_info.pNext = nullptr;
+	cmd_begin_info.pInheritanceInfo = nullptr;
+	cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+	VK_CHECK(vkBeginCommandBuffer(_main_command_buffer, &cmd_begin_info));
+
+	VkClearValue clear_color;
+	float flash = abs(sin(_frame_number / 120.0f));
+	clear_color.color = { { 1.0f - flash, flash, flash * 0.5f, 1.0f } };
+
+	VkRenderPassBeginInfo render_pass_begin_info = {};
+	render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+	render_pass_begin_info.pNext = nullptr;
+	render_pass_begin_info.renderPass = _render_pass;
+	render_pass_begin_info.renderArea.offset.x = 0;
+	render_pass_begin_info.renderArea.offset.y = 0;
+	render_pass_begin_info.renderArea.extent = _window_extent;
+	render_pass_begin_info.framebuffer = _framebuffers[swapchain_image_index];
+	render_pass_begin_info.clearValueCount = 1;
+	render_pass_begin_info.pClearValues = &clear_color;
+
+	vkCmdBeginRenderPass(_main_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdEndRenderPass(_main_command_buffer);
+	VK_CHECK(vkEndCommandBuffer(_main_command_buffer));
+
+	VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+	VkSubmitInfo submit_info = {};
+	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submit_info.pNext = nullptr;
+	submit_info.pWaitDstStageMask = &wait_stage;
+	submit_info.waitSemaphoreCount = 1;
+	submit_info.pWaitSemaphores = &_present_semaphore;
+	submit_info.signalSemaphoreCount = 1;
+	submit_info.pSignalSemaphores = &_render_semaphore;
+	submit_info.commandBufferCount = 1;
+	submit_info.pCommandBuffers = &_main_command_buffer;
+
+	VK_CHECK(vkQueueSubmit(_graphics_queue, 1, &submit_info, _render_fence));
+
+	VkPresentInfoKHR present_info = {};
+	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	present_info.pNext = nullptr;
+	present_info.waitSemaphoreCount = 1;
+	present_info.pWaitSemaphores = &_render_semaphore;
+	present_info.swapchainCount = 1;
+	present_info.pSwapchains = &_swapchain;
+	present_info.pImageIndices = &swapchain_image_index;
+
+	VK_CHECK(vkQueuePresentKHR(_graphics_queue, &present_info));
+
+	_frame_number++;
+}
 
 void Vulkun::cleanup() {
 	singleton_instance = nullptr;
