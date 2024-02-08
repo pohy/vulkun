@@ -8,7 +8,7 @@ class Vulkun {
 	bool _is_initialized = false;
 	bool _is_rendering_paused = false;
 
-	VkExtent2D _window_extent = {1920, 1080};
+	VkExtent2D _window_extent = {1600, 900};
 	struct SDL_Window *_window = nullptr;
 
 	VkInstance _instance;
@@ -27,9 +27,14 @@ class Vulkun {
 	VkCommandPool _command_pool;
 	VkCommandBuffer _main_command_buffer;
 
+	VkRenderPass _render_pass;
+	std::vector<VkFramebuffer> _framebuffers;
+
 	bool _init_vulkan();
 	bool _init_swapchain();
 	bool _init_commands();
+	bool _init_default_renderpass();
+	bool _init_framebuffers();
   public:
 	static Vulkun &get_singleton();
 

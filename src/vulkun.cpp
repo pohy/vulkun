@@ -1,6 +1,6 @@
 #include "vulkun.h"
-#include "vk_types.h"
 #include "vk_initializers.h"
+#include "vk_types.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
@@ -34,6 +34,8 @@ void Vulkun::init() {
 	_is_initialized = _init_vulkan();
 	_is_initialized = _init_swapchain();
 	_is_initialized = _init_commands();
+	_is_initialized = _init_default_renderpass();
+	_is_initialized = _init_framebuffers();
 
 	fmt::print("Vulkun initialized: {}\n", _is_initialized);
 }
@@ -42,11 +44,11 @@ bool Vulkun::_init_vulkan() {
 	vkb::InstanceBuilder builder;
 
 	auto inst_ret = builder
-		.set_app_name("Vulkun")
-		.require_api_version(1, 2, 0)
-		.request_validation_layers(enable_validation_layers)
-		.use_default_debug_messenger()
-		.build();
+							.set_app_name("Vulkun")
+							.require_api_version(1, 2, 0)
+							.request_validation_layers(enable_validation_layers)
+							.use_default_debug_messenger()
+							.build();
 
 	if (!inst_ret) {
 		fmt::print(stderr, "Failed to create Vulkan instance. Error: {}\n", inst_ret.error().message().c_str());
@@ -62,10 +64,10 @@ bool Vulkun::_init_vulkan() {
 
 	vkb::PhysicalDeviceSelector selector(vkb_inst);
 	vkb::PhysicalDevice physical_device = selector
-		  .set_surface(_surface)
-		  .set_minimum_version(1, 2)
-		  .select()
-		  .value();
+												  .set_surface(_surface)
+												  .set_minimum_version(1, 2)
+												  .select()
+												  .value();
 	vkb::DeviceBuilder device_builder(physical_device);
 	vkb::Device vkb_device = device_builder.build().value();
 
@@ -81,11 +83,11 @@ bool Vulkun::_init_vulkan() {
 bool Vulkun::_init_swapchain() {
 	vkb::SwapchainBuilder swapchain_builder(_physical_device, _device, _surface);
 	vkb::Swapchain vkb_swapchain = swapchain_builder
-		.use_default_format_selection()
-		.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
-		.set_desired_extent(_window_extent.width, _window_extent.height)
-		.build()
-		.value();
+										   .use_default_format_selection()
+										   .set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR)
+										   .set_desired_extent(_window_extent.width, _window_extent.height)
+										   .build()
+										   .value();
 
 	_swapchain = vkb_swapchain.swapchain;
 	_swapchain_images = vkb_swapchain.get_images().value();
@@ -103,9 +105,62 @@ bool Vulkun::_init_commands() {
 
 	return true;
 }
+
+bool Vulkun::_init_default_renderpass() {
+	VkAttachmentDescription color_attachment = {};
+	color_attachment.format = _swapchain_image_format;
+	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+	color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+	VkAttachmentReference color_attachment_ref = {};
+	color_attachment_ref.attachment = 0;
+	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+	VkSubpassDescription subpass = {};
+	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+	subpass.colorAttachmentCount = 1;
+	subpass.pColorAttachments = &color_attachment_ref;
+
+	VkRenderPassCreateInfo render_pass_info = {};
+	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	render_pass_info.attachmentCount = 1;
+	render_pass_info.pAttachments = &color_attachment;
+	render_pass_info.subpassCount = 1;
+	render_pass_info.pSubpasses = &subpass;
+
+	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_render_pass));
+
+	return true;
+}
+
+bool Vulkun::_init_framebuffers() {
+	VkFramebufferCreateInfo framebuffer_info = {};
+	framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	framebuffer_info.pNext = nullptr;
+	framebuffer_info.renderPass = _render_pass;
+	framebuffer_info.attachmentCount = 1;
+	framebuffer_info.width = _window_extent.width;
+	framebuffer_info.height = _window_extent.height;
+	framebuffer_info.layers = 1;
+
+	const uint32_t swapchain_image_count = _swapchain_images.size();
+	_framebuffers.resize(swapchain_image_count);
+	for (uint32_t i = 0; i < swapchain_image_count; i++) {
+		framebuffer_info.pAttachments = &_swapchain_image_views[i];
+		VK_CHECK(vkCreateFramebuffer(_device, &framebuffer_info, nullptr, &_framebuffers[i]));
+	}
+
+	return true;
+}
+
 void Vulkun::run() {
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-	SDL_Window *window = SDL_CreateWindow("Vulkun", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1920, 1080, 0);
+	SDL_Window *window = SDL_CreateWindow("Vulkun", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, 0);
 
 	bool should_quit = false;
 	SDL_Event event;
@@ -144,22 +199,27 @@ void Vulkun::run() {
 void Vulkun::draw() {}
 
 void Vulkun::cleanup() {
-	if (_is_initialized) {
-		vkDestroyCommandPool(_device, _command_pool, nullptr);
+	singleton_instance = nullptr;
 
-		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
-		for (auto &image_view : _swapchain_image_views) {
-			vkDestroyImageView(_device, image_view, nullptr);
-		}
-
-		vkDestroyDevice(_device, nullptr);
-		vkDestroySurfaceKHR(_instance, _surface, nullptr);
-
-		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
-		vkDestroyInstance(_instance, nullptr);
-
-		SDL_DestroyWindow(_window);
+	if (!_is_initialized) {
+		return;
 	}
 
-	singleton_instance = nullptr;
+	vkDestroyRenderPass(_device, _render_pass, nullptr);
+
+	vkDestroyCommandPool(_device, _command_pool, nullptr);
+
+	vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+	for (int i = 0; i < _framebuffers.size(); i++) {
+		vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
+		vkDestroyImageView(_device, _swapchain_image_views[i], nullptr);
+	}
+
+	vkDestroyDevice(_device, nullptr);
+	vkDestroySurfaceKHR(_instance, _surface, nullptr);
+
+	vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
+	vkDestroyInstance(_instance, nullptr);
+
+	SDL_DestroyWindow(_window);
 }
