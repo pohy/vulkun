@@ -29,7 +29,7 @@ void Vulkun::init() {
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
-	_window = SDL_CreateWindow("Vulkun", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, window_flags);
+	_window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, window_flags);
 
 	_is_initialized = _init_vulkan();
 	_is_initialized = _init_swapchain();
@@ -46,7 +46,7 @@ bool Vulkun::_init_vulkan() {
 
 	auto inst_ret = builder
 							.set_app_name(APP_NAME)
-							.require_api_version(1, 2, 0)
+							.require_api_version(1, 1, 0)
 							.request_validation_layers(enable_validation_layers)
 							.use_default_debug_messenger()
 							.build();
@@ -193,7 +193,6 @@ bool Vulkun::_init_sync_structures() {
 
 void Vulkun::run() {
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-	_window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, 0);
 
 	bool should_quit = false;
 	SDL_Event event;
@@ -229,7 +228,6 @@ void Vulkun::run() {
 			continue;
 		}
 
-		SDL_SetWindowTitle(_window, fmt::format("{} - Frame: {}", APP_NAME, _frame_number).c_str());
 
 		draw();
 	}

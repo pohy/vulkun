@@ -1,3 +1,5 @@
+import platform
+
 # TODO: Building fmt requires a manual build, ugh. It uses C++ modules which is highly incompatible. W/e, ugh
 # Library(
 #     'fmt',
@@ -9,17 +11,29 @@
 
 env = Environment(
     CPPPATH=[
-        "/opt/homebrew/include",
         "third_party/vk-bootstrap/src",
         "third_party/fmt/include",
     ],
-    LIBPATH=[
-        "/opt/homebrew/lib",
-        "./third_party/fmt/build",
-    ],
-    CXXFLAGS=["-std=c++17"],
-    LIBS=["SDL2", "vulkan", "fmt"],
+    LIBS=["SDL2"],
 )
+
+os = platform.system().lower()
+if os in ["linux", "darwin"]:
+    env.Append(CXXFLAGS=["-std=c++17"])
+    env.Append(CPPPATH=["/opt/homebrew/include"])
+    env.Append(LIBPATH=[
+        "third_party/fmt/build",
+        "/opt/homebrew/lib",
+    ])
+    env.Append(LIBS=["vulkan", "fmt"])
+if os == "windows":
+    env.Append(CXXFLAGS=["/std:c++17", "/EHsc"])
+    env.Append(CPPPATH=["e:/David/Software/VulkanSDK/1.3.275.0/Include/"])
+    env.Append(LIBPATH=[
+        "third_party/fmt/build/Debug/",
+        "e:/David/Software/VulkanSDK/1.3.275.0/Lib/",
+    ])
+    env.Append(LIBS=["vulkan-1", "fmtd"])
     
 
 env.Tool("compilation_db")
