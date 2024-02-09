@@ -1,16 +1,16 @@
-#pragma once
+#pragma oncevulk
 
 #include "vk_types.h"
 
 #define APP_NAME "Vulkun - ゔるくん"
 
 class Vulkun {
-  private:
+private:
 	int _frame_number = 0;
 	bool _is_initialized = false;
 	bool _is_rendering_paused = false;
 
-	VkExtent2D _window_extent = {1600, 900};
+	VkExtent2D _window_extent = { 1600, 900 };
 	struct SDL_Window *_window = nullptr;
 
 	VkInstance _instance;
@@ -41,8 +41,11 @@ class Vulkun {
 	bool _init_default_renderpass();
 	bool _init_framebuffers();
 	bool _init_sync_structures();
+	bool _init_pipelines();
 
-  public:
+	bool _load_shader_module(const char *file_path, VkShaderModule *out_shader_module);
+
+public:
 	static Vulkun &get_singleton();
 
 	void init();

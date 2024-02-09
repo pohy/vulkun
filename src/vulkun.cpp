@@ -10,6 +10,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <fstream>
 #include <thread>
 
 constexpr bool enable_validation_layers = true;
@@ -37,6 +38,7 @@ void Vulkun::init() {
 	_is_initialized = _init_default_renderpass();
 	_is_initialized = _init_framebuffers();
 	_is_initialized = _init_sync_structures();
+	_is_initialized = _init_pipelines();
 
 	fmt::print("Vulkun initialized: {}\n", _is_initialized);
 }
@@ -187,6 +189,51 @@ bool Vulkun::_init_sync_structures() {
 
 	VK_CHECK(vkCreateSemaphore(_device, &semaphore_info, nullptr, &_present_semaphore));
 	VK_CHECK(vkCreateSemaphore(_device, &semaphore_info, nullptr, &_render_semaphore));
+
+	return true;
+}
+
+bool Vulkun::_init_pipelines() {
+	bool success = false;
+
+	VkShaderModule triangle_vert_shader, triangle_frag_shader;
+	success = _load_shader_module("shaders/triangle.vert.spv", &triangle_vert_shader);
+	success = _load_shader_module("shaders/triangle.frag.spv", &triangle_frag_shader);
+
+	return success;
+}
+
+bool Vulkun::_load_shader_module(const char *file_path, VkShaderModule *out_shader_module) {
+	// Load the shader file
+	std::ifstream file(file_path, std::ios::ate | std::ios::binary);
+	if (!file.is_open()) {
+		fmt::println(stderr, "Failed to open file: {}", file_path);
+		return false;
+	}
+
+	size_t file_size = (size_t)file.tellg();
+	std::vector<uint32_t> buffer(file_size / sizeof(uint32_t));
+
+	file.seekg(0);
+	file.read((char *)buffer.data(), file_size);
+	file.close();
+
+	// Create the shader module
+	VkShaderModuleCreateInfo create_info = {};
+	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+	create_info.pNext = nullptr;
+	create_info.codeSize = buffer.size() * sizeof(uint32_t);
+	create_info.pCode = buffer.data();
+
+	VkShaderModule shader_module;
+	if (vkCreateShaderModule(_device, &create_info, nullptr, &shader_module) != VK_SUCCESS) {
+		fmt::println(stderr, "Failed to create shader module. At path: {}", file_path);
+		return false;
+	}
+
+	fmt::print("Shader module created: {}\n", file_path);
+
+	*out_shader_module = shader_module;
 
 	return true;
 }
