@@ -192,8 +192,6 @@ bool Vulkun::_init_sync_structures() {
 }
 
 void Vulkun::run() {
-	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-
 	bool should_quit = false;
 	SDL_Event event;
 
@@ -227,7 +225,6 @@ void Vulkun::run() {
 			std::this_thread::sleep_for(std::chrono::milliseconds(100));
 			continue;
 		}
-
 
 		draw();
 	}
