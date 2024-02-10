@@ -198,8 +198,8 @@ bool Vulkun::_init_pipelines() {
 	bool success = false;
 
 	VkShaderModule triangle_vert_shader, triangle_frag_shader;
-	success = _load_shader_module("shaders/triangle.vert.spv", &triangle_vert_shader);
-	success = _load_shader_module("shaders/triangle.frag.spv", &triangle_frag_shader);
+	success = _load_shader_module("shaders/colored_triangle.vert.spv", &triangle_vert_shader);
+	success = _load_shader_module("shaders/colored_triangle.frag.spv", &triangle_frag_shader);
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
 	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_triangle_pipeline_layout));
