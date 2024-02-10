@@ -1,8 +1,6 @@
 #pragma once
 
 #include <array>
-#include <deque>
-#include <functional>
 #include <memory>
 #include <optional>
 #include <span>

@@ -101,6 +101,10 @@ bool Vulkun::_init_swapchain() {
 	_swapchain_image_views = vkb_swapchain.get_image_views().value();
 	_swapchain_image_format = vkb_swapchain.image_format;
 
+	_deletion_queue.push_function([=]() {
+		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+	});
+
 	return true;
 }
 
@@ -119,6 +123,10 @@ bool Vulkun::_init_commands() {
 	cmd_alloc_info.commandBufferCount = 1;
 	cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_alloc_info, &_main_command_buffer));
+
+	_deletion_queue.push_function([=]() {
+		vkDestroyCommandPool(_device, _command_pool, nullptr);
+	});
 
 	return true;
 }
@@ -153,6 +161,10 @@ bool Vulkun::_init_default_renderpass() {
 
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_render_pass));
 
+	_deletion_queue.push_function([=]() {
+		vkDestroyRenderPass(_device, _render_pass, nullptr);
+	});
+
 	return true;
 }
 
@@ -171,6 +183,11 @@ bool Vulkun::_init_framebuffers() {
 	for (uint32_t i = 0; i < swapchain_image_count; i++) {
 		framebuffer_info.pAttachments = &_swapchain_image_views[i];
 		VK_CHECK(vkCreateFramebuffer(_device, &framebuffer_info, nullptr, &_framebuffers[i]));
+
+		_deletion_queue.push_function([=]() {
+			vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
+			vkDestroyImageView(_device, _swapchain_image_views[i], nullptr);
+		});
 	}
 
 	return true;
@@ -184,12 +201,21 @@ bool Vulkun::_init_sync_structures() {
 
 	VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_render_fence));
 
+	_deletion_queue.push_function([=]() {
+		vkDestroyFence(_device, _render_fence, nullptr);
+	});
+
 	VkSemaphoreCreateInfo semaphore_info = {};
 	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 	semaphore_info.pNext = nullptr;
 
 	VK_CHECK(vkCreateSemaphore(_device, &semaphore_info, nullptr, &_present_semaphore));
 	VK_CHECK(vkCreateSemaphore(_device, &semaphore_info, nullptr, &_render_semaphore));
+
+	_deletion_queue.push_function([=]() {
+		vkDestroySemaphore(_device, _present_semaphore, nullptr);
+		vkDestroySemaphore(_device, _render_semaphore, nullptr);
+	});
 
 	return true;
 }
@@ -201,13 +227,17 @@ bool Vulkun::_init_pipelines() {
 		"triangle", "colored_triangle"
 	};
 
+	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_pipeline_layout));
+
+	_deletion_queue.push_function([=]() {
+		vkDestroyPipelineLayout(_device, _pipeline_layout, nullptr);
+	});
+
 	for (auto &shader_name : shaders_names) {
 		VkShaderModule vert_shader_module, frag_shader_module;
 		success = _load_shader_module(fmt::format("shaders/{}.vert.spv", shader_name).c_str(), &vert_shader_module);
 		success = _load_shader_module(fmt::format("shaders/{}.frag.spv", shader_name).c_str(), &frag_shader_module);
-
-		VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
-		VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_triangle_pipeline_layout));
 
 		PipelineBuilder pipeline_builder;
 		pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vert_shader_module));
@@ -229,40 +259,15 @@ bool Vulkun::_init_pipelines() {
 		pipeline_builder.rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
 		pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
 		pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
-		pipeline_builder.pipeline_layout = _triangle_pipeline_layout;
+		pipeline_builder.pipeline_layout = _pipeline_layout;
 
-		_pipelines.push_back(pipeline_builder.build_pipeline(_device, _render_pass));
+		VkPipeline pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
+		_pipelines.push_back(pipeline);
+
+		_deletion_queue.push_function([=]() {
+			vkDestroyPipeline(_device, pipeline, nullptr);
+		});
 	}
-
-	// VkShaderModule triangle_vert_shader, triangle_frag_shader;
-	// success = _load_shader_module("shaders/colored_triangle.vert.spv", &triangle_vert_shader);
-	// success = _load_shader_module("shaders/colored_triangle.frag.spv", &triangle_frag_shader);
-
-	// VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
-	// VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_triangle_pipeline_layout));
-	//
-	// PipelineBuilder pipeline_builder;
-	// pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangle_vert_shader));
-	// pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangle_frag_shader));
-	// pipeline_builder.vertex_input_info = vkinit::vertex_input_state_create_info();
-	// pipeline_builder.input_assembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-	// pipeline_builder.viewport = {
-	// 	.x = 0.0f,
-	// 	.y = 0.0f,
-	// 	.width = (float)_window_extent.width,
-	// 	.height = (float)_window_extent.height,
-	// 	.minDepth = 0.0f,
-	// 	.maxDepth = 1.0f,
-	// };
-	// pipeline_builder.scissor = {
-	// 	.offset = { 0, 0 },
-	// 	.extent = _window_extent,
-	// };
-	// pipeline_builder.rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-	// pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
-	// pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
-	// pipeline_builder.pipeline_layout = _triangle_pipeline_layout;
-	// _triangle_pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
 
 	return success;
 }
@@ -294,10 +299,13 @@ bool Vulkun::_load_shader_module(const char *file_path, VkShaderModule *out_shad
 		fmt::println(stderr, "Failed to create shader module. At path: {}", file_path);
 		return false;
 	}
-
 	fmt::print("Shader module created: {}\n", file_path);
 
 	*out_shader_module = shader_module;
+
+	_deletion_queue.push_function([=]() {
+		vkDestroyShaderModule(_device, shader_module, nullptr);
+	});
 
 	return true;
 }
@@ -426,20 +434,7 @@ void Vulkun::cleanup() {
 
 	VK_CHECK(vkWaitForFences(_device, 1, &_render_fence, true, 1000000000));
 
-	vkDestroySemaphore(_device, _render_semaphore, nullptr);
-	vkDestroySemaphore(_device, _present_semaphore, nullptr);
-	vkDestroyFence(_device, _render_fence, nullptr);
-
-	for (int i = 0; i < _framebuffers.size(); i++) {
-		vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
-		vkDestroyImageView(_device, _swapchain_image_views[i], nullptr);
-	}
-
-	vkDestroyRenderPass(_device, _render_pass, nullptr);
-
-	vkDestroyCommandPool(_device, _command_pool, nullptr);
-
-	vkDestroySwapchainKHR(_device, _swapchain, nullptr);
+	_deletion_queue.flush();
 
 	vkDestroyDevice(_device, nullptr);
 	vkDestroySurfaceKHR(_instance, _surface, nullptr);

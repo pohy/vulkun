@@ -1,6 +1,7 @@
 #pragma oncevulk
 
 #include "vk_types.h"
+#include "deletion_queue.h"
 
 #define APP_NAME "Vulkun - ゔるくん"
 
@@ -13,6 +14,8 @@ private:
 
 	VkExtent2D _window_extent = { 1600, 900 };
 	struct SDL_Window *_window = nullptr;
+
+	DeletionQueue _deletion_queue;
 
 	VkInstance _instance;
 	VkDebugUtilsMessengerEXT _debug_messenger;
@@ -36,7 +39,7 @@ private:
 	VkSemaphore _present_semaphore, _render_semaphore;
 	VkFence _render_fence;
 
-	VkPipelineLayout _triangle_pipeline_layout;
+	VkPipelineLayout _pipeline_layout;
 	// VkPipeline _triangle_pipeline;
 	std::vector<VkPipeline> _pipelines;
 
