@@ -7,6 +7,7 @@
 class Vulkun {
 private:
 	int _frame_number = 0;
+	int _selected_pipeline_idx = 0;
 	bool _is_initialized = false;
 	bool _is_rendering_paused = false;
 
@@ -36,7 +37,8 @@ private:
 	VkFence _render_fence;
 
 	VkPipelineLayout _triangle_pipeline_layout;
-	VkPipeline _triangle_pipeline;
+	// VkPipeline _triangle_pipeline;
+	std::vector<VkPipeline> _pipelines;
 
 	bool _init_vulkan();
 	bool _init_swapchain();

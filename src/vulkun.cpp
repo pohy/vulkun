@@ -197,35 +197,72 @@ bool Vulkun::_init_sync_structures() {
 bool Vulkun::_init_pipelines() {
 	bool success = false;
 
-	VkShaderModule triangle_vert_shader, triangle_frag_shader;
-	success = _load_shader_module("shaders/colored_triangle.vert.spv", &triangle_vert_shader);
-	success = _load_shader_module("shaders/colored_triangle.frag.spv", &triangle_frag_shader);
-
-	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
-	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_triangle_pipeline_layout));
-
-	PipelineBuilder pipeline_builder;
-	pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangle_vert_shader));
-	pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangle_frag_shader));
-	pipeline_builder.vertex_input_info = vkinit::vertex_input_state_create_info();
-	pipeline_builder.input_assembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-	pipeline_builder.viewport = {
-		.x = 0.0f,
-		.y = 0.0f,
-		.width = (float)_window_extent.width,
-		.height = (float)_window_extent.height,
-		.minDepth = 0.0f,
-		.maxDepth = 1.0f,
+	std::vector<std::string> shaders_names = {
+		"triangle", "colored_triangle"
 	};
-	pipeline_builder.scissor = {
-		.offset = { 0, 0 },
-		.extent = _window_extent,
-	};
-	pipeline_builder.rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-	pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
-	pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
-	pipeline_builder.pipeline_layout = _triangle_pipeline_layout;
-	_triangle_pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
+
+	for (auto &shader_name : shaders_names) {
+		VkShaderModule vert_shader_module, frag_shader_module;
+		success = _load_shader_module(fmt::format("shaders/{}.vert.spv", shader_name).c_str(), &vert_shader_module);
+		success = _load_shader_module(fmt::format("shaders/{}.frag.spv", shader_name).c_str(), &frag_shader_module);
+
+		VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+		VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_triangle_pipeline_layout));
+
+		PipelineBuilder pipeline_builder;
+		pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vert_shader_module));
+		pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, frag_shader_module));
+		pipeline_builder.vertex_input_info = vkinit::vertex_input_state_create_info();
+		pipeline_builder.input_assembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+		pipeline_builder.viewport = {
+			.x = 0.0f,
+			.y = 0.0f,
+			.width = (float)_window_extent.width,
+			.height = (float)_window_extent.height,
+			.minDepth = 0.0f,
+			.maxDepth = 1.0f,
+		};
+		pipeline_builder.scissor = {
+			.offset = { 0, 0 },
+			.extent = _window_extent,
+		};
+		pipeline_builder.rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+		pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
+		pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
+		pipeline_builder.pipeline_layout = _triangle_pipeline_layout;
+
+		_pipelines.push_back(pipeline_builder.build_pipeline(_device, _render_pass));
+	}
+
+	// VkShaderModule triangle_vert_shader, triangle_frag_shader;
+	// success = _load_shader_module("shaders/colored_triangle.vert.spv", &triangle_vert_shader);
+	// success = _load_shader_module("shaders/colored_triangle.frag.spv", &triangle_frag_shader);
+
+	// VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+	// VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_triangle_pipeline_layout));
+	//
+	// PipelineBuilder pipeline_builder;
+	// pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangle_vert_shader));
+	// pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangle_frag_shader));
+	// pipeline_builder.vertex_input_info = vkinit::vertex_input_state_create_info();
+	// pipeline_builder.input_assembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	// pipeline_builder.viewport = {
+	// 	.x = 0.0f,
+	// 	.y = 0.0f,
+	// 	.width = (float)_window_extent.width,
+	// 	.height = (float)_window_extent.height,
+	// 	.minDepth = 0.0f,
+	// 	.maxDepth = 1.0f,
+	// };
+	// pipeline_builder.scissor = {
+	// 	.offset = { 0, 0 },
+	// 	.extent = _window_extent,
+	// };
+	// pipeline_builder.rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+	// pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
+	// pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
+	// pipeline_builder.pipeline_layout = _triangle_pipeline_layout;
+	// _triangle_pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
 
 	return success;
 }
@@ -288,6 +325,9 @@ void Vulkun::run() {
 				if (event.key.keysym.sym == SDLK_ESCAPE) {
 					should_quit = true;
 				}
+				if (event.key.keysym.sym == SDLK_SPACE) {
+					_selected_pipeline_idx = (_selected_pipeline_idx + 1) % _pipelines.size();
+				}
 			}
 		}
 
@@ -338,8 +378,12 @@ void Vulkun::draw() {
 
 	vkCmdBeginRenderPass(_main_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-	vkCmdBindPipeline(_main_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _triangle_pipeline);
-	vkCmdDraw(_main_command_buffer, 3, 1, 0, 0);
+	if (_selected_pipeline_idx >= 0 && _selected_pipeline_idx < _pipelines.size()) {
+		vkCmdBindPipeline(_main_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines[_selected_pipeline_idx]);
+		vkCmdDraw(_main_command_buffer, 3, 1, 0, 0);
+	} else {
+		fmt::println(stderr, "Pipeline index out of bounds: {}/{}", _selected_pipeline_idx, _pipelines.size());
+	}
 
 	vkCmdEndRenderPass(_main_command_buffer);
 	VK_CHECK(vkEndCommandBuffer(_main_command_buffer));
