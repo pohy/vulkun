@@ -1,4 +1,4 @@
 #!/bin/bash
 set -eu
 
-./compile-shaders.sh && ./bin/vulkun.exe
+./scripts/compile-shaders.sh && ./bin/vulkun.exe

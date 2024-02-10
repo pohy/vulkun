@@ -2,4 +2,4 @@
 
 set -eu
 
-./compile-shaders.sh && DYLD_LIBRARY_PATH=/opt/homebrew/lib ./bin/vulkun
+./scripts/compile-shaders.sh && DYLD_LIBRARY_PATH=/opt/homebrew/lib ./bin/vulkun
