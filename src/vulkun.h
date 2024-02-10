@@ -35,6 +35,9 @@ private:
 	VkSemaphore _present_semaphore, _render_semaphore;
 	VkFence _render_fence;
 
+	VkPipelineLayout _triangle_pipeline_layout;
+	VkPipeline _triangle_pipeline;
+
 	bool _init_vulkan();
 	bool _init_swapchain();
 	bool _init_commands();

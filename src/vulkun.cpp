@@ -1,4 +1,5 @@
 #include "vulkun.h"
+#include "pipeline_builder.h"
 #include "vk_initializers.h"
 #include "vk_types.h"
 
@@ -200,6 +201,32 @@ bool Vulkun::_init_pipelines() {
 	success = _load_shader_module("shaders/triangle.vert.spv", &triangle_vert_shader);
 	success = _load_shader_module("shaders/triangle.frag.spv", &triangle_frag_shader);
 
+	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_triangle_pipeline_layout));
+
+	PipelineBuilder pipeline_builder;
+	pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, triangle_vert_shader));
+	pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, triangle_frag_shader));
+	pipeline_builder.vertex_input_info = vkinit::vertex_input_state_create_info();
+	pipeline_builder.input_assembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	pipeline_builder.viewport = {
+		.x = 0.0f,
+		.y = 0.0f,
+		.width = (float)_window_extent.width,
+		.height = (float)_window_extent.height,
+		.minDepth = 0.0f,
+		.maxDepth = 1.0f,
+	};
+	pipeline_builder.scissor = {
+		.offset = { 0, 0 },
+		.extent = _window_extent,
+	};
+	pipeline_builder.rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+	pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
+	pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
+	pipeline_builder.pipeline_layout = _triangle_pipeline_layout;
+	_triangle_pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
+
 	return success;
 }
 
@@ -310,6 +337,9 @@ void Vulkun::draw() {
 	render_pass_begin_info.pClearValues = &clear_color;
 
 	vkCmdBeginRenderPass(_main_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+
+	vkCmdBindPipeline(_main_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _triangle_pipeline);
+	vkCmdDraw(_main_command_buffer, 3, 1, 0, 0);
 
 	vkCmdEndRenderPass(_main_command_buffer);
 	VK_CHECK(vkEndCommandBuffer(_main_command_buffer));
