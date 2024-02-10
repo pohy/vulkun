@@ -13,6 +13,7 @@ env = Environment(
     CPPPATH=[
         "third_party/vk-bootstrap/src",
         "third_party/fmt/include",
+        "third_party/VulkanMemoryAllocator/include",
     ],
     LIBS=["SDL2"],
 )

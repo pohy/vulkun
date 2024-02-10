@@ -1,4 +1,3 @@
-#version 450
 #include "include/common.glsl"
 
 void main()
