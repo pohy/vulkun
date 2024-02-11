@@ -25,6 +25,7 @@ struct Mesh {
 
 	size_t size_of_vertices() {
 		auto size = vertices.size() * sizeof(Vertex);
+		// fmt::println("Size of vertices: {} * {} = {}", vertices.size(), sizeof(Vertex), size);
 		return size;
 	}
 };

@@ -480,19 +480,32 @@ void Vulkun::draw() {
 
 	vkCmdBeginRenderPass(_main_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-	if (_selected_pipeline_idx >= 0 && _selected_pipeline_idx < _pipelines.size()) {
-		// TODO: We need to distinct between different pipelines. Some also have meshes and specific layouts.
-		vkCmdBindPipeline(_main_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines[_selected_pipeline_idx]);
+	// if (_selected_pipeline_idx >= 0 && _selected_pipeline_idx < _pipelines.size()) {
+	// 	// TODO: We need to distinct between different pipelines. Some also have meshes and specific layouts.
+	// 	vkCmdBindPipeline(_main_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines[_selected_pipeline_idx]);
+	//
+	// 	if (_stages_info[_selected_pipeline_idx].pVertex_input != nullptr) {
+	// 		VkDeviceSize offset = 0;
+	// 		vkCmdBindVertexBuffers(_main_command_buffer, 0, 1, &_triangle_mesh.vertex_buffer.buffer, &offset);
+	// 		vkCmdDraw(_main_command_buffer, _triangle_mesh.vertices.size(), 1, 0, 0);
+	// 	} else {
+	// 		vkCmdDraw(_main_command_buffer, 3, 1, 0, 0);
+	// 	}
+	// } else {
+	// 	fmt::println(stderr, "Pipeline index out of bounds: {}/{}", _selected_pipeline_idx, _pipelines.size());
+	// }
 
-		if (_stages_info[_selected_pipeline_idx].pVertex_input != nullptr) {
+	for (int i = _stages_info.size() - 1; i >= 0; --i) {
+		vkCmdBindPipeline(_main_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines[i]);
+
+		// TODO: We want something that stores the pipeline and relevant meshes and has responsibility for calling the bind and draw commands
+		if (_stages_info[i].pVertex_input != nullptr) {
 			VkDeviceSize offset = 0;
 			vkCmdBindVertexBuffers(_main_command_buffer, 0, 1, &_triangle_mesh.vertex_buffer.buffer, &offset);
 			vkCmdDraw(_main_command_buffer, _triangle_mesh.vertices.size(), 1, 0, 0);
 		} else {
 			vkCmdDraw(_main_command_buffer, 3, 1, 0, 0);
 		}
-	} else {
-		fmt::println(stderr, "Pipeline index out of bounds: {}/{}", _selected_pipeline_idx, _pipelines.size());
 	}
 
 	vkCmdEndRenderPass(_main_command_buffer);
