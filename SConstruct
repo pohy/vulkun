@@ -14,6 +14,7 @@ env = Environment(
         "third_party/vk-bootstrap/src",
         "third_party/fmt/include",
         "third_party/VulkanMemoryAllocator/include",
+        "third_party/glm",
     ],
     LIBS=["SDL2"],
 )
