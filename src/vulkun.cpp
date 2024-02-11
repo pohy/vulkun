@@ -8,6 +8,9 @@
 
 #include <VkBootstrap.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/transform.hpp>
+
 #include <cassert>
 #include <chrono>
 #include <fstream>
@@ -251,6 +254,16 @@ bool Vulkun::_init_pipelines() {
 	VertexInputDescription mesh_vertex_input = Vertex::create_vertex_description();
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+
+	VkPushConstantRange push_constant = {
+		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+		.offset = 0,
+		.size = sizeof(PushConstants),
+	};
+
+	pipeline_layout_info.pushConstantRangeCount = 1;
+	pipeline_layout_info.pPushConstantRanges = &push_constant;
+
 	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_pipeline_layout));
 
 	_deletion_queue.push_function([=]() {
@@ -463,13 +476,35 @@ void Vulkun::draw() {
 
 	vkCmdBeginRenderPass(_main_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
+	/**
+	 * D R A W I N G
+	 */
+
 	vkCmdBindPipeline(_main_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
 
 	// TODO: We need to distinct between different pipelines. Some also have meshes and specific layouts.
 	// TODO: We want something that stores the pipeline and relevant meshes and has responsibility for calling the bind and draw commands
 	VkDeviceSize offset = 0;
 	vkCmdBindVertexBuffers(_main_command_buffer, 0, 1, &_triangle_mesh.vertex_buffer.buffer, &offset);
+
+	glm::vec3 cam_pos = { 0.0f, 0.0f, -2.0f };
+	glm::mat4 view = glm::translate(glm::mat4(1.0f), cam_pos);
+	float aspect = (float)_window_extent.width / (float)_window_extent.height;
+	glm::mat4 projection = glm::perspective(glm::radians(70.0f), aspect, 0.1f, 200.0f);
+	// projection[1][1] *= -1;
+	glm::mat4 model = glm::rotate(glm::mat4(1.0f), glm::radians(_frame_number * 0.4f), glm::vec3(0, 1, 0));
+	glm::mat4 mesh_matrix = projection * view * model;
+	PushConstants push_constants = {
+		.render_matrix = mesh_matrix,
+		.frame_number = _frame_number,
+	};
+	vkCmdPushConstants(_main_command_buffer, _pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push_constants);
+
 	vkCmdDraw(_main_command_buffer, _triangle_mesh.vertices.size(), 1, 0, 0);
+
+	/**
+	 * E N D   D R A W I N G
+	 */
 
 	vkCmdEndRenderPass(_main_command_buffer);
 	VK_CHECK(vkEndCommandBuffer(_main_command_buffer));

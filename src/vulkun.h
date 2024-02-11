@@ -4,11 +4,19 @@
 #include "vk_mesh.h"
 #include "vk_types.h"
 
+#include <glm/glm.hpp>
+
 #define APP_NAME "Vulkun - ゔるくん"
+
+struct PushConstants {
+	glm::vec4 fluff;
+	glm::mat4 render_matrix;
+	uint32_t frame_number;
+};
 
 class Vulkun {
 private:
-	int _frame_number = 0;
+	uint32_t _frame_number = 0;
 	int _selected_pipeline_idx = 0;
 	bool _is_initialized = false;
 	bool _is_rendering_paused = false;
