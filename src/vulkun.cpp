@@ -6,7 +6,6 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 
-#define VK_KHR_portability_enumeration 1
 #include <VkBootstrap.h>
 
 #include <cassert>
@@ -32,6 +31,10 @@ void Vulkun::init() {
 
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 	_window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, window_flags);
+
+	_deletion_queue.push_function([=]() {
+		SDL_DestroyWindow(_window);
+	});
 
 	_is_initialized = _init_vulkan();
 	_is_initialized = _init_swapchain();
@@ -64,6 +67,11 @@ bool Vulkun::_init_vulkan() {
 	_instance = vkb_inst.instance;
 	_debug_messenger = vkb_inst.debug_messenger;
 
+	_deletion_queue.push_function([=]() {
+		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
+		vkDestroyInstance(_instance, nullptr);
+	});
+
 	if (!SDL_Vulkan_CreateSurface(_window, _instance, &_surface)) {
 		fmt::print(stderr, "Failed to create Vulkan surface.\n");
 		return false;
@@ -80,6 +88,11 @@ bool Vulkun::_init_vulkan() {
 
 	_device = vkb_device.device;
 	_physical_device = physical_device.physical_device;
+
+	_deletion_queue.push_function([=]() {
+		vkDestroyDevice(_device, nullptr);
+		vkDestroySurfaceKHR(_instance, _surface, nullptr);
+	});
 
 	_graphics_queue = vkb_device.get_queue(vkb::QueueType::graphics).value();
 	_graphics_queue_family_idx = vkb_device.get_queue_index(vkb::QueueType::graphics).value();
@@ -435,12 +448,4 @@ void Vulkun::cleanup() {
 	VK_CHECK(vkWaitForFences(_device, 1, &_render_fence, true, 1000000000));
 
 	_deletion_queue.flush();
-
-	vkDestroyDevice(_device, nullptr);
-	vkDestroySurfaceKHR(_instance, _surface, nullptr);
-
-	vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
-	vkDestroyInstance(_instance, nullptr);
-
-	SDL_DestroyWindow(_window);
 }

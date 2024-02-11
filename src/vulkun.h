@@ -1,7 +1,7 @@
 #pragma oncevulk
 
-#include "vk_types.h"
 #include "deletion_queue.h"
+#include "vk_types.h"
 
 #define APP_NAME "Vulkun - ゔるくん"
 
