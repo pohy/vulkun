@@ -15,11 +15,12 @@ struct AllocatedBuffer {
 	VmaAllocation allocation;
 };
 
-#define VK_CHECK(x)                                                        \
-	do {                                                                   \
-		VkResult err = x;                                                  \
-		if (err) {                                                         \
-			fmt::print("Detected Vulkan error: {}", string_VkResult(err)); \
-			abort();                                                       \
-		}                                                                  \
+// TODO: Print stacktrace on error
+#define VK_CHECK(x)                                                          \
+	do {                                                                     \
+		VkResult err = x;                                                    \
+		if (err) {                                                           \
+			fmt::println("Detected Vulkan error: {}", string_VkResult(err)); \
+			abort();                                                         \
+		}                                                                    \
 	} while (0)

@@ -24,6 +24,8 @@ struct Mesh {
 	std::vector<Vertex> vertices;
 	AllocatedBuffer vertex_buffer;
 
+	bool load_from_obj(std::string file_path);
+
 	size_t size_of_vertices() {
 		auto size = vertices.size() * sizeof(Vertex);
 		// fmt::println("Size of vertices: {} * {} = {}", vertices.size(), sizeof(Vertex), size);

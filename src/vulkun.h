@@ -53,6 +53,7 @@ private:
 	VkPipelineLayout _pipeline_layout;
 	VkPipeline _pipeline;
 	Mesh _triangle_mesh;
+	Mesh _monkey_mesh;
 
 	bool _init_vulkan();
 	bool _init_swapchain();

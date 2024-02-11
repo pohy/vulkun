@@ -309,7 +309,7 @@ bool Vulkun::_init_pipelines() {
 
 	pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount = mesh_vertex_input.attributes.size();
 	pipeline_builder.vertex_input_info.pVertexAttributeDescriptions = mesh_vertex_input.attributes.data();
-	fmt::println("Vertex attribute description count: {}", pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount);
+	fmt::println("\tVertex attribute description count: {}", pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount);
 
 	_pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
 
@@ -370,7 +370,12 @@ void Vulkun::_load_meshes() {
 	_triangle_mesh.vertices[1].color = { 0.83f, 0.65f, 0.035f };
 	_triangle_mesh.vertices[2].color = { 0.83f, 0.035f, 0.65f };
 
-	_upload_mesh(_triangle_mesh);
+	// _upload_mesh(_triangle_mesh);
+
+
+	_monkey_mesh.load_from_obj("assets/opicka.obj");
+
+	_upload_mesh(_monkey_mesh);
 }
 
 void Vulkun::_upload_mesh(Mesh &mesh) {
@@ -379,6 +384,8 @@ void Vulkun::_upload_mesh(Mesh &mesh) {
 	buffer_info.pNext = nullptr;
 	buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 	buffer_info.size = mesh.size_of_vertices();
+
+	fmt::println("Will upload mesh with size: {}", mesh.vertices.size());
 
 	VmaAllocationCreateInfo vma_alloc_create_info = {};
 	vma_alloc_create_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
@@ -400,7 +407,7 @@ void Vulkun::_upload_mesh(Mesh &mesh) {
 	memcpy(vertex_data, mesh.vertices.data(), mesh.size_of_vertices());
 	vmaUnmapMemory(_allocator, mesh.vertex_buffer.allocation);
 
-	fmt::println("Mesh uploaded: {}", mesh.vertices.size());
+	fmt::println("\tMesh uploaded");
 }
 
 void Vulkun::run() {
@@ -485,13 +492,13 @@ void Vulkun::draw() {
 	// TODO: We need to distinct between different pipelines. Some also have meshes and specific layouts.
 	// TODO: We want something that stores the pipeline and relevant meshes and has responsibility for calling the bind and draw commands
 	VkDeviceSize offset = 0;
-	vkCmdBindVertexBuffers(_main_command_buffer, 0, 1, &_triangle_mesh.vertex_buffer.buffer, &offset);
+	vkCmdBindVertexBuffers(_main_command_buffer, 0, 1, &_monkey_mesh.vertex_buffer.buffer, &offset);
 
 	glm::vec3 cam_pos = { 0.0f, 0.0f, -2.0f };
 	glm::mat4 view = glm::translate(glm::mat4(1.0f), cam_pos);
 	float aspect = (float)_window_extent.width / (float)_window_extent.height;
 	glm::mat4 projection = glm::perspective(glm::radians(70.0f), aspect, 0.1f, 200.0f);
-	// projection[1][1] *= -1;
+	projection[1][1] *= -1;
 	glm::mat4 model = glm::rotate(glm::mat4(1.0f), glm::radians(_frame_number * 0.4f), glm::vec3(0, 1, 0));
 	glm::mat4 mesh_matrix = projection * view * model;
 	PushConstants push_constants = {
@@ -500,7 +507,7 @@ void Vulkun::draw() {
 	};
 	vkCmdPushConstants(_main_command_buffer, _pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push_constants);
 
-	vkCmdDraw(_main_command_buffer, _triangle_mesh.vertices.size(), 1, 0, 0);
+	vkCmdDraw(_main_command_buffer, _monkey_mesh.vertices.size(), 1, 0, 0);
 
 	/**
 	 * E N D   D R A W I N G
