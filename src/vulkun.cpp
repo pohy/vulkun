@@ -250,13 +250,6 @@ bool Vulkun::_init_pipelines() {
 
 	VertexInputDescription mesh_vertex_input = Vertex::create_vertex_description();
 
-	_stages_info = {
-		// TODO: Will the mesh_vertex_input memory leak? Or will the memory get freed with mesh_vertex_input and lifetime of _init_pipelines?
-		{ .vertex_name = "mesh_triangle", .fragment_name = "colored_triangle", .pVertex_input = &mesh_vertex_input },
-		{ .vertex_name = "colored_triangle", .fragment_name = "colored_triangle" },
-		{ .vertex_name = "triangle", .fragment_name = "triangle" },
-	};
-
 	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
 	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_pipeline_layout));
 
@@ -264,59 +257,52 @@ bool Vulkun::_init_pipelines() {
 		vkDestroyPipelineLayout(_device, _pipeline_layout, nullptr);
 	});
 
-	for (auto &stages_info : _stages_info) {
-		// TODO: Reuse existing shader modules
-		VkShaderModule vert_shader_module, frag_shader_module;
-		success = _load_shader_module(fmt::format("shaders/{}.vert.spv", stages_info.vertex_name).c_str(), &vert_shader_module);
-		success = _load_shader_module(fmt::format("shaders/{}.frag.spv", stages_info.fragment_name).c_str(), &frag_shader_module);
+	VkShaderModule vert_shader_module, frag_shader_module;
+	success = _load_shader_module(fmt::format("shaders/{}.vert.spv", "mesh_triangle").c_str(), &vert_shader_module);
+	success = _load_shader_module(fmt::format("shaders/{}.frag.spv", "colored_triangle").c_str(), &frag_shader_module);
 
-		if (!success) {
-			fmt::println(stderr, "Failed to load shader modules for pipeline: {} -> {}", stages_info.vertex_name, stages_info.fragment_name);
-			return false;
-		}
-
-		PipelineBuilder pipeline_builder;
-		pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vert_shader_module));
-		pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, frag_shader_module));
-		pipeline_builder.vertex_input_info = vkinit::vertex_input_state_create_info();
-		pipeline_builder.input_assembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-		pipeline_builder.viewport = {
-			.x = 0.0f,
-			.y = 0.0f,
-			.width = (float)_window_extent.width,
-			.height = (float)_window_extent.height,
-			.minDepth = 0.0f,
-			.maxDepth = 1.0f,
-		};
-		pipeline_builder.scissor = {
-			.offset = { 0, 0 },
-			.extent = _window_extent,
-		};
-		pipeline_builder.rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-		pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
-		pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
-		pipeline_builder.pipeline_layout = _pipeline_layout;
-
-		if (stages_info.pVertex_input != nullptr) {
-			fmt::println("Using custom vertex input description for {}", stages_info.vertex_name);
-			pipeline_builder.vertex_input_info.flags = stages_info.pVertex_input->flags;
-
-			pipeline_builder.vertex_input_info.vertexBindingDescriptionCount = stages_info.pVertex_input->bindings.size();
-			pipeline_builder.vertex_input_info.pVertexBindingDescriptions = stages_info.pVertex_input->bindings.data();
-			fmt::println("Vertex binding description count: {}", pipeline_builder.vertex_input_info.vertexBindingDescriptionCount);
-
-			pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount = stages_info.pVertex_input->attributes.size();
-			pipeline_builder.vertex_input_info.pVertexAttributeDescriptions = stages_info.pVertex_input->attributes.data();
-			fmt::println("Vertex attribute description count: {}", pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount);
-		}
-
-		VkPipeline pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
-		_pipelines.push_back(pipeline);
-
-		_deletion_queue.push_function([=]() {
-			vkDestroyPipeline(_device, pipeline, nullptr);
-		});
+	if (!success) {
+		fmt::println(stderr, "Failed to load shader modules for pipeline.");
+		return false;
 	}
+
+	PipelineBuilder pipeline_builder;
+	pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vert_shader_module));
+	pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, frag_shader_module));
+	pipeline_builder.vertex_input_info = vkinit::vertex_input_state_create_info();
+	pipeline_builder.input_assembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	pipeline_builder.viewport = {
+		.x = 0.0f,
+		.y = 0.0f,
+		.width = (float)_window_extent.width,
+		.height = (float)_window_extent.height,
+		.minDepth = 0.0f,
+		.maxDepth = 1.0f,
+	};
+	pipeline_builder.scissor = {
+		.offset = { 0, 0 },
+		.extent = _window_extent,
+	};
+	pipeline_builder.rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+	pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
+	pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
+	pipeline_builder.pipeline_layout = _pipeline_layout;
+
+	pipeline_builder.vertex_input_info.flags = mesh_vertex_input.flags;
+
+	pipeline_builder.vertex_input_info.vertexBindingDescriptionCount = mesh_vertex_input.bindings.size();
+	pipeline_builder.vertex_input_info.pVertexBindingDescriptions = mesh_vertex_input.bindings.data();
+	fmt::println("Vertex binding description count: {}", pipeline_builder.vertex_input_info.vertexBindingDescriptionCount);
+
+	pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount = mesh_vertex_input.attributes.size();
+	pipeline_builder.vertex_input_info.pVertexAttributeDescriptions = mesh_vertex_input.attributes.data();
+	fmt::println("Vertex attribute description count: {}", pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount);
+
+	_pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
+
+	_deletion_queue.push_function([=]() {
+		vkDestroyPipeline(_device, _pipeline, nullptr);
+	});
 
 	return success;
 }
@@ -427,9 +413,6 @@ void Vulkun::run() {
 				if (event.key.keysym.sym == SDLK_ESCAPE) {
 					should_quit = true;
 				}
-				if (event.key.keysym.sym == SDLK_SPACE) {
-					_selected_pipeline_idx = (_selected_pipeline_idx + 1) % _pipelines.size();
-				}
 			}
 		}
 
@@ -480,33 +463,13 @@ void Vulkun::draw() {
 
 	vkCmdBeginRenderPass(_main_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
-	// if (_selected_pipeline_idx >= 0 && _selected_pipeline_idx < _pipelines.size()) {
-	// 	// TODO: We need to distinct between different pipelines. Some also have meshes and specific layouts.
-	// 	vkCmdBindPipeline(_main_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines[_selected_pipeline_idx]);
-	//
-	// 	if (_stages_info[_selected_pipeline_idx].pVertex_input != nullptr) {
-	// 		VkDeviceSize offset = 0;
-	// 		vkCmdBindVertexBuffers(_main_command_buffer, 0, 1, &_triangle_mesh.vertex_buffer.buffer, &offset);
-	// 		vkCmdDraw(_main_command_buffer, _triangle_mesh.vertices.size(), 1, 0, 0);
-	// 	} else {
-	// 		vkCmdDraw(_main_command_buffer, 3, 1, 0, 0);
-	// 	}
-	// } else {
-	// 	fmt::println(stderr, "Pipeline index out of bounds: {}/{}", _selected_pipeline_idx, _pipelines.size());
-	// }
+	vkCmdBindPipeline(_main_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
 
-	for (int i = _stages_info.size() - 1; i >= 0; --i) {
-		vkCmdBindPipeline(_main_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines[i]);
-
-		// TODO: We want something that stores the pipeline and relevant meshes and has responsibility for calling the bind and draw commands
-		if (_stages_info[i].pVertex_input != nullptr) {
-			VkDeviceSize offset = 0;
-			vkCmdBindVertexBuffers(_main_command_buffer, 0, 1, &_triangle_mesh.vertex_buffer.buffer, &offset);
-			vkCmdDraw(_main_command_buffer, _triangle_mesh.vertices.size(), 1, 0, 0);
-		} else {
-			vkCmdDraw(_main_command_buffer, 3, 1, 0, 0);
-		}
-	}
+	// TODO: We need to distinct between different pipelines. Some also have meshes and specific layouts.
+	// TODO: We want something that stores the pipeline and relevant meshes and has responsibility for calling the bind and draw commands
+	VkDeviceSize offset = 0;
+	vkCmdBindVertexBuffers(_main_command_buffer, 0, 1, &_triangle_mesh.vertex_buffer.buffer, &offset);
+	vkCmdDraw(_main_command_buffer, _triangle_mesh.vertices.size(), 1, 0, 0);
 
 	vkCmdEndRenderPass(_main_command_buffer);
 	VK_CHECK(vkEndCommandBuffer(_main_command_buffer));
