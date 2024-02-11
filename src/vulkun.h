@@ -1,6 +1,7 @@
-#pragma oncevulk
+#pragma once
 
 #include "deletion_queue.h"
+#include "vk_mesh.h"
 #include "vk_types.h"
 
 #define APP_NAME "Vulkun - ゔるくん"
@@ -23,6 +24,8 @@ private:
 	VkDevice _device;
 	VkSurfaceKHR _surface;
 
+	VmaAllocator _allocator;
+
 	VkSwapchainKHR _swapchain;
 	VkFormat _swapchain_image_format;
 	std::vector<VkImage> _swapchain_images;
@@ -40,8 +43,8 @@ private:
 	VkFence _render_fence;
 
 	VkPipelineLayout _pipeline_layout;
-	// VkPipeline _triangle_pipeline;
 	std::vector<VkPipeline> _pipelines;
+	Mesh _triangle_mesh;
 
 	bool _init_vulkan();
 	bool _init_swapchain();
@@ -52,6 +55,8 @@ private:
 	bool _init_pipelines();
 
 	bool _load_shader_module(const char *file_path, VkShaderModule *out_shader_module);
+	void _load_meshes();
+	void _upload_mesh(Mesh &mesh);
 
 public:
 	static Vulkun &get_singleton();

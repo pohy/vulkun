@@ -45,6 +45,8 @@ void Vulkun::init() {
 	_is_initialized = _init_pipelines();
 
 	fmt::print("Vulkun initialized: {}\n", _is_initialized);
+
+	_load_meshes();
 }
 
 bool Vulkun::_init_vulkan() {
@@ -96,6 +98,16 @@ bool Vulkun::_init_vulkan() {
 
 	_graphics_queue = vkb_device.get_queue(vkb::QueueType::graphics).value();
 	_graphics_queue_family_idx = vkb_device.get_queue_index(vkb::QueueType::graphics).value();
+
+	VmaAllocatorCreateInfo allocator_info = {};
+	allocator_info.physicalDevice = _physical_device;
+	allocator_info.device = _device;
+	allocator_info.instance = _instance;
+	vmaCreateAllocator(&allocator_info, &_allocator);
+
+	_deletion_queue.push_function([=]() {
+		vmaDestroyAllocator(_allocator);
+	});
 
 	return true;
 }
@@ -236,7 +248,7 @@ bool Vulkun::_init_sync_structures() {
 bool Vulkun::_init_pipelines() {
 	bool success = false;
 
-	std::vector<std::string> shaders_names = {
+	std::vector<std::string> shader_names = {
 		"triangle", "colored_triangle"
 	};
 
@@ -247,7 +259,7 @@ bool Vulkun::_init_pipelines() {
 		vkDestroyPipelineLayout(_device, _pipeline_layout, nullptr);
 	});
 
-	for (auto &shader_name : shaders_names) {
+	for (auto &shader_name : shader_names) {
 		VkShaderModule vert_shader_module, frag_shader_module;
 		success = _load_shader_module(fmt::format("shaders/{}.vert.spv", shader_name).c_str(), &vert_shader_module);
 		success = _load_shader_module(fmt::format("shaders/{}.frag.spv", shader_name).c_str(), &frag_shader_module);
@@ -321,6 +333,48 @@ bool Vulkun::_load_shader_module(const char *file_path, VkShaderModule *out_shad
 	});
 
 	return true;
+}
+
+void Vulkun::_load_meshes() {
+	_triangle_mesh.vertices.resize(3);
+
+	_triangle_mesh.vertices[0].pos = { 1.0f, 1.0f, 0.0f };
+	_triangle_mesh.vertices[1].pos = { -1.0f, 1.0f, 0.0f };
+	_triangle_mesh.vertices[2].pos = { 0.0f, -1.0f, 0.0f };
+
+	_triangle_mesh.vertices[0].color = { 0.65f, 0.83f, 0.035f };
+	_triangle_mesh.vertices[1].color = { 0.83f, 0.65f, 0.035f };
+	_triangle_mesh.vertices[2].color = { 0.83f, 0.035f, 0.65f };
+
+	_upload_mesh(_triangle_mesh);
+}
+
+void Vulkun::_upload_mesh(Mesh &mesh) {
+	VkBufferCreateInfo buffer_info = {};
+	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_info.pNext = nullptr;
+	buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+	buffer_info.size = mesh.size_of_vertices();
+
+	VmaAllocationCreateInfo vma_alloc_create_info = {};
+	vma_alloc_create_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+	VK_CHECK(vmaCreateBuffer(
+			_allocator,
+			&buffer_info,
+			&vma_alloc_create_info,
+			&mesh.vertexBuffer.buffer,
+			&mesh.vertexBuffer.allocation,
+			nullptr));
+
+	_deletion_queue.push_function([=]() {
+		vmaDestroyBuffer(_allocator, mesh.vertexBuffer.buffer, mesh.vertexBuffer.allocation);
+	});
+
+	void *vertex_data;
+	vmaMapMemory(_allocator, mesh.vertexBuffer.allocation, &vertex_data);
+	memcpy(&vertex_data, mesh.vertices.data(), mesh.size_of_vertices());
+	vmaUnmapMemory(_allocator, mesh.vertexBuffer.allocation);
 }
 
 void Vulkun::run() {

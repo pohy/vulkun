@@ -10,8 +10,10 @@
 #define FMT_HEADER_ONLY
 #include <fmt/core.h>
 
-// #include <glm/mat4x4.hpp>
-// #include <glm/vec4.hpp>
+struct AllocatedBuffer {
+	VkBuffer buffer;
+	VmaAllocation allocation;
+};
 
 #define VK_CHECK(x)                                                        \
 	do {                                                                   \
