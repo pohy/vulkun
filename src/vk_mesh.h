@@ -21,9 +21,10 @@ struct Vertex {
 
 struct Mesh {
 	std::vector<Vertex> vertices;
-	AllocatedBuffer vertexBuffer;
+	AllocatedBuffer vertex_buffer;
 
 	size_t size_of_vertices() {
-		return vertices.size() * sizeof(Vertex);
+		auto size = vertices.size() * sizeof(Vertex);
+		return size;
 	}
 };

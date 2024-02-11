@@ -1,3 +1,4 @@
+#include <fmt/core.h>
 #include <deque>
 #include <functional>
 
@@ -9,6 +10,7 @@ struct DeletionQueue {
 	}
 
 	void flush() {
+		fmt::println("Flushing deletion queue with {} deletors", deletors.size());
 		for (auto it = deletors.rbegin(); it != deletors.rend(); it++) {
 			(*it)();
 		}

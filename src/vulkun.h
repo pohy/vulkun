@@ -6,6 +6,22 @@
 
 #define APP_NAME "Vulkun - ゔるくん"
 
+struct PipelineStagesInfo {
+	std::string vertex_name;
+	std::string fragment_name;
+
+	// VertexInputDescription vertex_input;
+	VertexInputDescription *pVertex_input = nullptr;
+
+	// ~PipelineStagesInfo() {
+	// 	fmt::println("PipelineStagesInfo destructor");
+	// 	// if (pVertex_input) {
+	// 	// 	fmt::println("Deleting pVertex_input");
+	// 	// 	delete pVertex_input;
+	// 	// }
+	// }
+};
+
 class Vulkun {
 private:
 	int _frame_number = 0;
@@ -45,6 +61,8 @@ private:
 	VkPipelineLayout _pipeline_layout;
 	std::vector<VkPipeline> _pipelines;
 	Mesh _triangle_mesh;
+
+	std::vector<PipelineStagesInfo> _stages_info;
 
 	bool _init_vulkan();
 	bool _init_swapchain();

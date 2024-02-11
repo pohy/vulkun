@@ -44,9 +44,9 @@ void Vulkun::init() {
 	_is_initialized = _init_sync_structures();
 	_is_initialized = _init_pipelines();
 
-	fmt::print("Vulkun initialized: {}\n", _is_initialized);
-
 	_load_meshes();
+
+	fmt::print("Vulkun initialized: {}\n", _is_initialized);
 }
 
 bool Vulkun::_init_vulkan() {
@@ -248,8 +248,13 @@ bool Vulkun::_init_sync_structures() {
 bool Vulkun::_init_pipelines() {
 	bool success = false;
 
-	std::vector<std::string> shader_names = {
-		"triangle", "colored_triangle"
+	VertexInputDescription mesh_vertex_input = Vertex::create_vertex_description();
+
+	_stages_info = {
+		// TODO: Will the mesh_vertex_input memory leak? Or will the memory get freed with mesh_vertex_input and lifetime of _init_pipelines?
+		{ .vertex_name = "mesh_triangle", .fragment_name = "colored_triangle", .pVertex_input = &mesh_vertex_input },
+		{ .vertex_name = "colored_triangle", .fragment_name = "colored_triangle" },
+		{ .vertex_name = "triangle", .fragment_name = "triangle" },
 	};
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
@@ -259,10 +264,16 @@ bool Vulkun::_init_pipelines() {
 		vkDestroyPipelineLayout(_device, _pipeline_layout, nullptr);
 	});
 
-	for (auto &shader_name : shader_names) {
+	for (auto &stages_info : _stages_info) {
+		// TODO: Reuse existing shader modules
 		VkShaderModule vert_shader_module, frag_shader_module;
-		success = _load_shader_module(fmt::format("shaders/{}.vert.spv", shader_name).c_str(), &vert_shader_module);
-		success = _load_shader_module(fmt::format("shaders/{}.frag.spv", shader_name).c_str(), &frag_shader_module);
+		success = _load_shader_module(fmt::format("shaders/{}.vert.spv", stages_info.vertex_name).c_str(), &vert_shader_module);
+		success = _load_shader_module(fmt::format("shaders/{}.frag.spv", stages_info.fragment_name).c_str(), &frag_shader_module);
+
+		if (!success) {
+			fmt::println(stderr, "Failed to load shader modules for pipeline: {} -> {}", stages_info.vertex_name, stages_info.fragment_name);
+			return false;
+		}
 
 		PipelineBuilder pipeline_builder;
 		pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vert_shader_module));
@@ -285,6 +296,19 @@ bool Vulkun::_init_pipelines() {
 		pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
 		pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
 		pipeline_builder.pipeline_layout = _pipeline_layout;
+
+		if (stages_info.pVertex_input != nullptr) {
+			fmt::println("Using custom vertex input description for {}", stages_info.vertex_name);
+			pipeline_builder.vertex_input_info.flags = stages_info.pVertex_input->flags;
+
+			pipeline_builder.vertex_input_info.vertexBindingDescriptionCount = stages_info.pVertex_input->bindings.size();
+			pipeline_builder.vertex_input_info.pVertexBindingDescriptions = stages_info.pVertex_input->bindings.data();
+			fmt::println("Vertex binding description count: {}", pipeline_builder.vertex_input_info.vertexBindingDescriptionCount);
+
+			pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount = stages_info.pVertex_input->attributes.size();
+			pipeline_builder.vertex_input_info.pVertexAttributeDescriptions = stages_info.pVertex_input->attributes.data();
+			fmt::println("Vertex attribute description count: {}", pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount);
+		}
 
 		VkPipeline pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
 		_pipelines.push_back(pipeline);
@@ -329,6 +353,7 @@ bool Vulkun::_load_shader_module(const char *file_path, VkShaderModule *out_shad
 	*out_shader_module = shader_module;
 
 	_deletion_queue.push_function([=]() {
+		// TODO: It seems that the shader module can be destroyed immediately after pipeline creation.
 		vkDestroyShaderModule(_device, shader_module, nullptr);
 	});
 
@@ -363,18 +388,20 @@ void Vulkun::_upload_mesh(Mesh &mesh) {
 			_allocator,
 			&buffer_info,
 			&vma_alloc_create_info,
-			&mesh.vertexBuffer.buffer,
-			&mesh.vertexBuffer.allocation,
+			&mesh.vertex_buffer.buffer,
+			&mesh.vertex_buffer.allocation,
 			nullptr));
 
 	_deletion_queue.push_function([=]() {
-		vmaDestroyBuffer(_allocator, mesh.vertexBuffer.buffer, mesh.vertexBuffer.allocation);
+		vmaDestroyBuffer(_allocator, mesh.vertex_buffer.buffer, mesh.vertex_buffer.allocation);
 	});
 
 	void *vertex_data;
-	vmaMapMemory(_allocator, mesh.vertexBuffer.allocation, &vertex_data);
-	memcpy(&vertex_data, mesh.vertices.data(), mesh.size_of_vertices());
-	vmaUnmapMemory(_allocator, mesh.vertexBuffer.allocation);
+	vmaMapMemory(_allocator, mesh.vertex_buffer.allocation, &vertex_data);
+	memcpy(vertex_data, mesh.vertices.data(), mesh.size_of_vertices());
+	vmaUnmapMemory(_allocator, mesh.vertex_buffer.allocation);
+
+	fmt::println("Mesh uploaded: {}", mesh.vertices.size());
 }
 
 void Vulkun::run() {
@@ -454,8 +481,16 @@ void Vulkun::draw() {
 	vkCmdBeginRenderPass(_main_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
 	if (_selected_pipeline_idx >= 0 && _selected_pipeline_idx < _pipelines.size()) {
+		// TODO: We need to distinct between different pipelines. Some also have meshes and specific layouts.
 		vkCmdBindPipeline(_main_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipelines[_selected_pipeline_idx]);
-		vkCmdDraw(_main_command_buffer, 3, 1, 0, 0);
+
+		if (_stages_info[_selected_pipeline_idx].pVertex_input != nullptr) {
+			VkDeviceSize offset = 0;
+			vkCmdBindVertexBuffers(_main_command_buffer, 0, 1, &_triangle_mesh.vertex_buffer.buffer, &offset);
+			vkCmdDraw(_main_command_buffer, _triangle_mesh.vertices.size(), 1, 0, 0);
+		} else {
+			vkCmdDraw(_main_command_buffer, 3, 1, 0, 0);
+		}
 	} else {
 		fmt::println(stderr, "Pipeline index out of bounds: {}/{}", _selected_pipeline_idx, _pipelines.size());
 	}
