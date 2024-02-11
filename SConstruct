@@ -15,6 +15,7 @@ env = Environment(
         "third_party/fmt/include",
         "third_party/VulkanMemoryAllocator/include",
         "third_party/glm",
+        "third_party/tinyobjloader",
     ],
     LIBS=["SDL2"],
 )
