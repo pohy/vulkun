@@ -9,8 +9,8 @@
 #include <VkBootstrap.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/transform.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtx/transform.hpp>
 
 #include <cassert>
 #include <chrono>
@@ -28,6 +28,8 @@ void Vulkun::init() {
 	// TODO: I don't actually understand why do we initialize the instance here, instead of the `get_singleton` method.
 	assert(singleton_instance == nullptr);
 	singleton_instance = this;
+
+	fmt::println("PushConstants size: {}", sizeof(PushConstants));
 
 	// Initialize SDL
 	// TODO: SDL validations
@@ -393,13 +395,17 @@ bool Vulkun::_init_scene() {
 	RenderObject monkey = {
 		.pMesh = get_mesh(MeshName::Monkey),
 		.pMaterial = get_material(MaterialName::Default),
-		// .transform = glm::mat4(1.0f),
+		.transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 2, 0)),
+		.update_push_constants = [=](PushConstants &push_constants) {
+			push_constants.render_matrix *= glm::translate(glm::vec3(0, 0, 2 + sin(_frame_number * 0.02f) * 6));
+			push_constants.render_matrix *= glm::rotate(sin(_frame_number * 0.03f) * 0.2f, glm::vec3(1, 0, 0));
+		},
 	};
 	_renderables.push_back(monkey);
 
 	for (int x = -20; x <= 20; ++x) {
 		for (int y = -20; y <= 20; ++y) {
-			glm::mat4 translation = glm::translate(glm::mat4{ 1.0f }, glm::vec3(x, 0, y));
+			glm::mat4 translation = glm::translate(glm::mat4{ 1.0f }, glm::vec3(x, -abs(y) * y * 0.1f, y));
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0f }, glm::vec3(0.2f));
 			RenderObject triangle = {
 				.pMesh = get_mesh(MeshName::Triangle),
@@ -546,7 +552,7 @@ void Vulkun::run() {
 
 void Vulkun::_draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_render_object, uint32_t count) {
 	// fmt::println("Drawing {} objects", count);
-	glm::vec3 cam_pos = { 0.0f, -6.0f, -10.0f };
+	glm::vec3 cam_pos = { 0.0f, -2.0f, -10.0f };
 	glm::mat4 view = glm::translate(glm::mat4(1.0f), cam_pos);
 
 	float aspect = (float)_window_extent.width / (float)_window_extent.height;
@@ -557,35 +563,38 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_
 	Mesh *pLast_mesh = nullptr;
 	for (uint32_t i = 0; i < count; ++i) {
 		// fmt::println("\tDrawing object {}", i);
-		RenderObject &object = pFirst_render_object[i];
+		RenderObject &render_object = pFirst_render_object[i];
 
-		if (pLast_material != object.pMaterial) {
-			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.pMaterial->pipeline);
-			pLast_material = object.pMaterial;
+		if (pLast_material != render_object.pMaterial) {
+			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_object.pMaterial->pipeline);
+			pLast_material = render_object.pMaterial;
 			// fmt::println("\t\tBound pipeline");
 		}
 
 		// fmt::println("\t\tObject transform: {}", glm::to_string(object.transform));
 		// glm::mat4 model = glm::rotate(glm::mat4(1.0f), glm::radians(_frame_number * 0.4f), glm::vec3(0, 1, 0));
-		glm::mat4 mesh_matrix = projection * view * object.transform;
+		glm::mat4 mesh_matrix = projection * view * render_object.transform;
 		// fmt::println("\t\tModel matrix: {}", glm::to_string(mesh_matrix));
 
 		PushConstants push_constants = {
 			.render_matrix = mesh_matrix,
-			.frame_number = _frame_number,
+			.frame_number = _frame_number + i,
 		};
-		vkCmdPushConstants(command_buffer, object.pMaterial->pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push_constants);
+		if (render_object.update_push_constants != nullptr) {
+			render_object.update_push_constants(push_constants);
+		}
+		vkCmdPushConstants(command_buffer, render_object.pMaterial->pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push_constants);
 		// fmt::println("\t\tPushed constants");
 
-		if (pLast_mesh != object.pMesh) {
+		if (pLast_mesh != render_object.pMesh) {
 			VkDeviceSize offset = 0;
-			vkCmdBindVertexBuffers(command_buffer, 0, 1, &object.pMesh->vertex_buffer.buffer, &offset);
-			pLast_mesh = object.pMesh;
+			vkCmdBindVertexBuffers(command_buffer, 0, 1, &render_object.pMesh->vertex_buffer.buffer, &offset);
+			pLast_mesh = render_object.pMesh;
 			// fmt::println("\t\tBound vertex buffer");
 		}
 
 		// TODO: Count draw calls
-		vkCmdDraw(command_buffer, object.pMesh->vertices.size(), 1, 0, 0);
+		vkCmdDraw(command_buffer, render_object.pMesh->vertices.size(), 1, 0, 0);
 		// fmt::println("\t\tDrawn object");
 	}
 

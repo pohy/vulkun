@@ -8,7 +8,6 @@ layout (location = 0) out vec3 out_color;
 
 layout (push_constant) uniform constants
 {
-	vec4 fluff;
 	mat4 render_matrix;
 	uint frame_number;
 } PushConstants;

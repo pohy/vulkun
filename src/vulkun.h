@@ -10,7 +10,6 @@
 #define APP_NAME "Vulkun - ゔるくん"
 
 struct PushConstants {
-	glm::vec4 fluff;
 	glm::mat4 render_matrix;
 	uint32_t frame_number;
 };
@@ -21,9 +20,11 @@ struct Material {
 };
 
 struct RenderObject {
-	Mesh *pMesh;
+	Mesh *pMesh = nullptr;
 	Material *pMaterial = nullptr;
-	glm::mat4 transform = glm::identity<glm::mat4>();
+	glm::mat4 transform = glm::mat4(1.0f);
+
+	std::function<void(PushConstants &)> update_push_constants = nullptr;
 };
 
 namespace MeshName {
