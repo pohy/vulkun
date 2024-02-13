@@ -10,6 +10,7 @@
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <cassert>
 #include <chrono>
@@ -48,6 +49,7 @@ void Vulkun::init() {
 	_is_initialized = _init_pipelines();
 
 	_load_meshes();
+	_is_initialized = _init_scene();
 
 	fmt::print("Vulkun initialized: {}\n", _is_initialized);
 }
@@ -325,10 +327,11 @@ bool Vulkun::_init_pipelines() {
 	pipeline_layout_info.pushConstantRangeCount = 1;
 	pipeline_layout_info.pPushConstantRanges = &push_constant;
 
-	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &_pipeline_layout));
+	VkPipelineLayout pipeline_layout;
+	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &pipeline_layout));
 
 	_deletion_queue.push_function([=]() {
-		vkDestroyPipelineLayout(_device, _pipeline_layout, nullptr);
+		vkDestroyPipelineLayout(_device, pipeline_layout, nullptr);
 	});
 
 	VkShaderModule vert_shader_module, frag_shader_module;
@@ -360,7 +363,7 @@ bool Vulkun::_init_pipelines() {
 	pipeline_builder.rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
 	pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
 	pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
-	pipeline_builder.pipeline_layout = _pipeline_layout;
+	pipeline_builder.pipeline_layout = pipeline_layout;
 
 	pipeline_builder.vertex_input_info.flags = mesh_vertex_input.flags;
 
@@ -374,13 +377,40 @@ bool Vulkun::_init_pipelines() {
 
 	pipeline_builder.depth_stencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
 
-	_pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
+	VkPipeline pipeline;
+	pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
+
+	create_material(MaterialName::Default, pipeline, pipeline_layout);
 
 	_deletion_queue.push_function([=]() {
-		vkDestroyPipeline(_device, _pipeline, nullptr);
+		vkDestroyPipeline(_device, pipeline, nullptr);
 	});
 
 	return success;
+}
+
+bool Vulkun::_init_scene() {
+	RenderObject monkey = {
+		.pMesh = get_mesh(MeshName::Monkey),
+		.pMaterial = get_material(MaterialName::Default),
+		// .transform = glm::mat4(1.0f),
+	};
+	_renderables.push_back(monkey);
+
+	for (int x = -20; x <= 20; ++x) {
+		for (int y = -20; y <= 20; ++y) {
+			glm::mat4 translation = glm::translate(glm::mat4{ 1.0f }, glm::vec3(x, 0, y));
+			glm::mat4 scale = glm::scale(glm::mat4{ 1.0f }, glm::vec3(0.2f));
+			RenderObject triangle = {
+				.pMesh = get_mesh(MeshName::Triangle),
+				.pMaterial = get_material(MaterialName::Default),
+				.transform = translation * scale,
+			};
+			_renderables.push_back(triangle);
+		}
+	}
+
+	return true;
 }
 
 bool Vulkun::_load_shader_module(const char *file_path, VkShaderModule *out_shader_module) {
@@ -423,21 +453,24 @@ bool Vulkun::_load_shader_module(const char *file_path, VkShaderModule *out_shad
 }
 
 void Vulkun::_load_meshes() {
-	_triangle_mesh.vertices.resize(3);
+	Mesh triangle_mesh;
+	triangle_mesh.vertices.resize(3);
 
-	_triangle_mesh.vertices[0].pos = { 1.0f, 1.0f, 0.0f };
-	_triangle_mesh.vertices[1].pos = { -1.0f, 1.0f, 0.0f };
-	_triangle_mesh.vertices[2].pos = { 0.0f, -1.0f, 0.0f };
+	triangle_mesh.vertices[0].pos = { 1.0f, 1.0f, 0.0f };
+	triangle_mesh.vertices[1].pos = { -1.0f, 1.0f, 0.0f };
+	triangle_mesh.vertices[2].pos = { 0.0f, -1.0f, 0.0f };
 
-	_triangle_mesh.vertices[0].color = { 0.65f, 0.83f, 0.035f };
-	_triangle_mesh.vertices[1].color = { 0.83f, 0.65f, 0.035f };
-	_triangle_mesh.vertices[2].color = { 0.83f, 0.035f, 0.65f };
+	triangle_mesh.vertices[0].color = { 0.65f, 0.83f, 0.035f };
+	triangle_mesh.vertices[1].color = { 0.83f, 0.65f, 0.035f };
+	triangle_mesh.vertices[2].color = { 0.83f, 0.035f, 0.65f };
 
-	// _upload_mesh(_triangle_mesh);
+	_upload_mesh(triangle_mesh);
+	_meshes[MeshName::Triangle] = triangle_mesh;
 
-	_monkey_mesh.load_from_obj("assets/opicka_smooth.obj");
-
-	_upload_mesh(_monkey_mesh);
+	Mesh monkey_mesh;
+	monkey_mesh.load_from_obj("assets/opicka_smooth.obj");
+	_upload_mesh(monkey_mesh);
+	_meshes[MeshName::Monkey] = monkey_mesh;
 }
 
 void Vulkun::_upload_mesh(Mesh &mesh) {
@@ -511,6 +544,54 @@ void Vulkun::run() {
 	}
 }
 
+void Vulkun::_draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_render_object, uint32_t count) {
+	// fmt::println("Drawing {} objects", count);
+	glm::vec3 cam_pos = { 0.0f, -6.0f, -10.0f };
+	glm::mat4 view = glm::translate(glm::mat4(1.0f), cam_pos);
+
+	float aspect = (float)_window_extent.width / (float)_window_extent.height;
+	glm::mat4 projection = glm::perspective(glm::radians(70.0f), aspect, 0.1f, 200.0f);
+	projection[1][1] *= -1;
+
+	Material *pLast_material = nullptr;
+	Mesh *pLast_mesh = nullptr;
+	for (uint32_t i = 0; i < count; ++i) {
+		// fmt::println("\tDrawing object {}", i);
+		RenderObject &object = pFirst_render_object[i];
+
+		if (pLast_material != object.pMaterial) {
+			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, object.pMaterial->pipeline);
+			pLast_material = object.pMaterial;
+			// fmt::println("\t\tBound pipeline");
+		}
+
+		// fmt::println("\t\tObject transform: {}", glm::to_string(object.transform));
+		// glm::mat4 model = glm::rotate(glm::mat4(1.0f), glm::radians(_frame_number * 0.4f), glm::vec3(0, 1, 0));
+		glm::mat4 mesh_matrix = projection * view * object.transform;
+		// fmt::println("\t\tModel matrix: {}", glm::to_string(mesh_matrix));
+
+		PushConstants push_constants = {
+			.render_matrix = mesh_matrix,
+			.frame_number = _frame_number,
+		};
+		vkCmdPushConstants(command_buffer, object.pMaterial->pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push_constants);
+		// fmt::println("\t\tPushed constants");
+
+		if (pLast_mesh != object.pMesh) {
+			VkDeviceSize offset = 0;
+			vkCmdBindVertexBuffers(command_buffer, 0, 1, &object.pMesh->vertex_buffer.buffer, &offset);
+			pLast_mesh = object.pMesh;
+			// fmt::println("\t\tBound vertex buffer");
+		}
+
+		// TODO: Count draw calls
+		vkCmdDraw(command_buffer, object.pMesh->vertices.size(), 1, 0, 0);
+		// fmt::println("\t\tDrawn object");
+	}
+
+	// fmt::println("\tFinished drawning {} objects", count);
+}
+
 void Vulkun::draw() {
 	VK_CHECK(vkWaitForFences(_device, 1, &_render_fence, true, 1000000000));
 	VK_CHECK(vkResetFences(_device, 1, &_render_fence));
@@ -555,27 +636,7 @@ void Vulkun::draw() {
 	 * D R A W I N G
 	 */
 
-	vkCmdBindPipeline(_main_command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, _pipeline);
-
-	// TODO: We need to distinct between different pipelines. Some also have meshes and specific layouts.
-	// TODO: We want something that stores the pipeline and relevant meshes and has responsibility for calling the bind and draw commands
-	VkDeviceSize offset = 0;
-	vkCmdBindVertexBuffers(_main_command_buffer, 0, 1, &_monkey_mesh.vertex_buffer.buffer, &offset);
-
-	glm::vec3 cam_pos = { 0.0f, 0.0f, -2.0f };
-	glm::mat4 view = glm::translate(glm::mat4(1.0f), cam_pos);
-	float aspect = (float)_window_extent.width / (float)_window_extent.height;
-	glm::mat4 projection = glm::perspective(glm::radians(70.0f), aspect, 0.1f, 200.0f);
-	projection[1][1] *= -1;
-	glm::mat4 model = glm::rotate(glm::mat4(1.0f), glm::radians(_frame_number * 0.4f), glm::vec3(0, 1, 0));
-	glm::mat4 mesh_matrix = projection * view * model;
-	PushConstants push_constants = {
-		.render_matrix = mesh_matrix,
-		.frame_number = _frame_number,
-	};
-	vkCmdPushConstants(_main_command_buffer, _pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push_constants);
-
-	vkCmdDraw(_main_command_buffer, _monkey_mesh.vertices.size(), 1, 0, 0);
+	_draw_objects(_main_command_buffer, _renderables.data(), _renderables.size());
 
 	/**
 	 * E N D   D R A W I N G
@@ -623,4 +684,32 @@ void Vulkun::cleanup() {
 	VK_CHECK(vkWaitForFences(_device, 1, &_render_fence, true, 1000000000));
 
 	_deletion_queue.flush();
+}
+
+Material *Vulkun::create_material(const std::string &name, VkPipeline pipeline, VkPipelineLayout pipeline_layout) {
+	Material material = {
+		.pipeline = pipeline,
+		.pipeline_layout = pipeline_layout,
+	};
+	_materials[name] = material;
+
+	return &_materials[name];
+}
+
+Material *Vulkun::get_material(const std::string &name) {
+	auto it = _materials.find(name);
+	if (it == _materials.end()) {
+		fmt::println(stderr, "Material with name {} not found", name);
+		abort();
+	}
+	return &it->second;
+}
+
+Mesh *Vulkun::get_mesh(const std::string &name) {
+	auto it = _meshes.find(name);
+	if (it == _meshes.end()) {
+		fmt::println(stderr, "Mesh with name {} not found", name);
+		abort();
+	}
+	return &it->second;
 }

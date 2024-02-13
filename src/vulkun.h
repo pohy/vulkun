@@ -1,6 +1,7 @@
 #pragma once
 
 #include "deletion_queue.h"
+#include "glm/ext/matrix_transform.hpp"
 #include "vk_mesh.h"
 #include "vk_types.h"
 
@@ -13,6 +14,26 @@ struct PushConstants {
 	glm::mat4 render_matrix;
 	uint32_t frame_number;
 };
+
+struct Material {
+	VkPipeline pipeline;
+	VkPipelineLayout pipeline_layout;
+};
+
+struct RenderObject {
+	Mesh *pMesh;
+	Material *pMaterial = nullptr;
+	glm::mat4 transform = glm::identity<glm::mat4>();
+};
+
+namespace MeshName {
+	const std::string Triangle = "triangle";
+	const std::string Monkey = "monkey";
+}
+
+namespace MaterialName {
+	const std::string Default = "default";
+}
 
 class Vulkun {
 private:
@@ -54,10 +75,9 @@ private:
 	VkSemaphore _present_semaphore, _render_semaphore;
 	VkFence _render_fence;
 
-	VkPipelineLayout _pipeline_layout;
-	VkPipeline _pipeline;
-	Mesh _triangle_mesh;
-	Mesh _monkey_mesh;
+	std::vector<RenderObject> _renderables;
+	std::unordered_map<std::string, Material> _materials;
+	std::unordered_map<std::string, Mesh> _meshes;
 
 	bool _init_vulkan();
 	bool _init_swapchain();
@@ -66,10 +86,13 @@ private:
 	bool _init_framebuffers();
 	bool _init_sync_structures();
 	bool _init_pipelines();
+	bool _init_scene();
 
 	bool _load_shader_module(const char *file_path, VkShaderModule *out_shader_module);
 	void _load_meshes();
 	void _upload_mesh(Mesh &mesh);
+
+	void _draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_render_object, uint32_t count);
 
 public:
 	static Vulkun &get_singleton();
@@ -80,4 +103,8 @@ public:
 	void cleanup();
 
 	bool is_initialized() const { return _is_initialized; }
+
+	Material *create_material(const std::string &name, VkPipeline pipeline, VkPipelineLayout pipeline_layout);
+	Material *get_material(const std::string &name);
+	Mesh *get_mesh(const std::string &name);
 };
