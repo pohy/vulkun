@@ -23,3 +23,6 @@ mat4 scale(vec3 scale) {
 	);
 }
 
+float pos_sin(float x) {
+	return sin(x) * 0.5f + 0.5f;
+}

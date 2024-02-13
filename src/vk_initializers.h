@@ -12,4 +12,7 @@ VkPipelineRasterizationStateCreateInfo rasterization_state_create_info(VkPolygon
 VkPipelineMultisampleStateCreateInfo multisampling_state_create_info();
 VkPipelineColorBlendAttachmentState color_blend_attachment_state();
 VkPipelineLayoutCreateInfo pipeline_layout_create_info();
+VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent);
+VkImageViewCreateInfo image_view_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspect_flags);
+VkPipelineDepthStencilStateCreateInfo depth_stencil_create_info(bool shuold_depth_test, bool should_depth_write, VkCompareOp compare_op);
 } //namespace vkinit

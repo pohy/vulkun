@@ -39,6 +39,10 @@ private:
 	std::vector<VkImage> _swapchain_images;
 	std::vector<VkImageView> _swapchain_image_views;
 
+	VkImageView _depth_image_view;
+	AllocatedImage _depth_image;
+	VkFormat _depth_format = VK_FORMAT_D32_SFLOAT;
+
 	VkQueue _graphics_queue;
 	uint32_t _graphics_queue_family_idx;
 	VkCommandPool _command_pool;

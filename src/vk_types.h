@@ -15,6 +15,11 @@ struct AllocatedBuffer {
 	VmaAllocation allocation;
 };
 
+struct AllocatedImage {
+	VkImage image;
+	VmaAllocation allocation;
+};
+
 // TODO: Print stacktrace on error
 #define VK_CHECK(x)                                                          \
 	do {                                                                     \

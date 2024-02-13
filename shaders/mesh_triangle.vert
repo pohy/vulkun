@@ -14,7 +14,7 @@ layout (push_constant) uniform constants
 } PushConstants;
 
 void main() {
-	float current_scale = 0.5f + abs(sin(PushConstants.frame_number * 0.01f));
+	float current_scale = 0.5f + pos_sin(PushConstants.frame_number * 0.01f);
 	mat4 transformation = scale(vec3(current_scale));// * translate(vec3(-0.5f, 0.0f, 0.0f));
 	vec4 pos = vec4(vertex_pos, 1.0f) * transformation;
 	gl_Position = PushConstants.render_matrix * pos;

@@ -133,6 +133,24 @@ bool Vulkun::_init_swapchain() {
 		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
 	});
 
+	VkExtent3D depth_image_extent = { _window_extent.width, _window_extent.height, 1 };
+	VkImageCreateInfo depth_image_info = vkinit::image_create_info(_depth_format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depth_image_extent);
+
+	VmaAllocationCreateInfo depth_image_alloc_info = {};
+	depth_image_alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+	depth_image_alloc_info.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+	vmaCreateImage(_allocator, &depth_image_info, &depth_image_alloc_info, &_depth_image.image, &_depth_image.allocation, nullptr);
+
+	VkImageViewCreateInfo depth_image_view_info = vkinit::image_view_create_info(_depth_format, _depth_image.image, VK_IMAGE_ASPECT_DEPTH_BIT);
+
+	VK_CHECK(vkCreateImageView(_device, &depth_image_view_info, nullptr, &_depth_image_view));
+
+	_deletion_queue.push_function([=]() {
+		vkDestroyImageView(_device, _depth_image_view, nullptr);
+		vmaDestroyImage(_allocator, _depth_image.image, _depth_image.allocation);
+	});
+
 	return true;
 }
 
@@ -174,18 +192,57 @@ bool Vulkun::_init_default_renderpass() {
 	color_attachment_ref.attachment = 0;
 	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+	VkAttachmentDescription depth_attachment = {};
+	depth_attachment.format = _depth_format;
+	depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+	depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+	depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+	depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+	depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+	VkAttachmentReference depth_attachment_ref = {};
+	depth_attachment_ref.attachment = 1;
+	depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 	VkSubpassDescription subpass = {};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &color_attachment_ref;
+	subpass.pDepthStencilAttachment = &depth_attachment_ref;
+
+	VkSubpassDependency dependency = {};
+	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	dependency.dstSubpass = 0;
+	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.srcAccessMask = 0;
+	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+	VkSubpassDependency depth_dependency = {};
+	depth_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+	depth_dependency.dstSubpass = 0;
+	depth_dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	depth_dependency.srcAccessMask = 0;
+	depth_dependency.dstStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+	depth_dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+	const uint32_t attachment_count = 2;
+	VkAttachmentDescription attachments[attachment_count] = { color_attachment, depth_attachment };
+
+	const uint32_t dependency_count = 2;
+	VkSubpassDependency dependencies[dependency_count] = { dependency, depth_dependency };
 
 	VkRenderPassCreateInfo render_pass_info = {};
 	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	render_pass_info.pNext = nullptr;
-	render_pass_info.attachmentCount = 1;
-	render_pass_info.pAttachments = &color_attachment;
+	render_pass_info.attachmentCount = attachment_count;
+	render_pass_info.pAttachments = &attachments[0];
 	render_pass_info.subpassCount = 1;
 	render_pass_info.pSubpasses = &subpass;
+	render_pass_info.dependencyCount = dependency_count;
+	render_pass_info.pDependencies = &dependencies[0];
 
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_render_pass));
 
@@ -209,7 +266,11 @@ bool Vulkun::_init_framebuffers() {
 	const uint32_t swapchain_image_count = _swapchain_images.size();
 	_framebuffers.resize(swapchain_image_count);
 	for (uint32_t i = 0; i < swapchain_image_count; i++) {
-		framebuffer_info.pAttachments = &_swapchain_image_views[i];
+		const uint32_t attachment_count = 2;
+		VkImageView attachments[attachment_count] = { _swapchain_image_views[i], _depth_image_view };
+
+		framebuffer_info.attachmentCount = attachment_count;
+		framebuffer_info.pAttachments = &attachments[0];
 		VK_CHECK(vkCreateFramebuffer(_device, &framebuffer_info, nullptr, &_framebuffers[i]));
 
 		_deletion_queue.push_function([=]() {
@@ -311,6 +372,8 @@ bool Vulkun::_init_pipelines() {
 	pipeline_builder.vertex_input_info.pVertexAttributeDescriptions = mesh_vertex_input.attributes.data();
 	fmt::println("\tVertex attribute description count: {}", pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount);
 
+	pipeline_builder.depth_stencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
+
 	_pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
 
 	_deletion_queue.push_function([=]() {
@@ -372,8 +435,7 @@ void Vulkun::_load_meshes() {
 
 	// _upload_mesh(_triangle_mesh);
 
-
-	_monkey_mesh.load_from_obj("assets/opicka.obj");
+	_monkey_mesh.load_from_obj("assets/opicka_smooth.obj");
 
 	_upload_mesh(_monkey_mesh);
 }
@@ -470,6 +532,12 @@ void Vulkun::draw() {
 	float flash = abs(sin(_frame_number / 120.0f));
 	clear_color.color = { { 1.0f - flash, flash, flash * 0.5f, 1.0f } };
 
+	VkClearValue clear_depth;
+	clear_depth.depthStencil.depth = 1.0f;
+
+	const uint32_t clear_value_count = 2;
+	VkClearValue clear_values[clear_value_count] = { clear_color, clear_depth };
+
 	VkRenderPassBeginInfo render_pass_begin_info = {};
 	render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	render_pass_begin_info.pNext = nullptr;
@@ -478,8 +546,8 @@ void Vulkun::draw() {
 	render_pass_begin_info.renderArea.offset.y = 0;
 	render_pass_begin_info.renderArea.extent = _window_extent;
 	render_pass_begin_info.framebuffer = _framebuffers[swapchain_image_index];
-	render_pass_begin_info.clearValueCount = 1;
-	render_pass_begin_info.pClearValues = &clear_color;
+	render_pass_begin_info.clearValueCount = clear_value_count;
+	render_pass_begin_info.pClearValues = &clear_values[0];
 
 	vkCmdBeginRenderPass(_main_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
