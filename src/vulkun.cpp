@@ -516,6 +516,7 @@ void Vulkun::run() {
 	SDL_Event event;
 
 	while (!should_quit) {
+		float start_time = SDL_GetTicks();
 		while (SDL_PollEvent(&event)) {
 			if (event.type == SDL_QUIT) {
 				should_quit = true;
@@ -535,6 +536,7 @@ void Vulkun::run() {
 					should_quit = true;
 				}
 			}
+
 		}
 
 		if (should_quit) {
@@ -546,18 +548,21 @@ void Vulkun::run() {
 			continue;
 		}
 
+		const uint8_t *keyboard_state = SDL_GetKeyboardState(nullptr);
+
+		_camera.handle_input(keyboard_state);
+		_camera.update(_delta_time);
+
 		draw();
+
+		_delta_time = (SDL_GetTicks() - start_time) / 1000.0f;
 	}
 }
 
 void Vulkun::_draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_render_object, uint32_t count) {
 	// fmt::println("Drawing {} objects", count);
-	glm::vec3 cam_pos = { 0.0f, -2.0f, -10.0f };
-	glm::mat4 view = glm::translate(glm::mat4(1.0f), cam_pos);
 
 	float aspect = (float)_window_extent.width / (float)_window_extent.height;
-	glm::mat4 projection = glm::perspective(glm::radians(70.0f), aspect, 0.1f, 200.0f);
-	projection[1][1] *= -1;
 
 	Material *pLast_material = nullptr;
 	Mesh *pLast_mesh = nullptr;
@@ -572,8 +577,7 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_
 		}
 
 		// fmt::println("\t\tObject transform: {}", glm::to_string(object.transform));
-		// glm::mat4 model = glm::rotate(glm::mat4(1.0f), glm::radians(_frame_number * 0.4f), glm::vec3(0, 1, 0));
-		glm::mat4 mesh_matrix = projection * view * render_object.transform;
+		glm::mat4 mesh_matrix = _camera.get_projection(aspect) * _camera.get_view() * render_object.transform;
 		// fmt::println("\t\tModel matrix: {}", glm::to_string(mesh_matrix));
 
 		PushConstants push_constants = {

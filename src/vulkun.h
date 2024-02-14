@@ -1,9 +1,9 @@
 #pragma once
 
 #include "deletion_queue.h"
-#include "glm/ext/matrix_transform.hpp"
 #include "vk_mesh.h"
 #include "vk_types.h"
+#include "camera.h"
 
 #include <glm/glm.hpp>
 
@@ -28,17 +28,18 @@ struct RenderObject {
 };
 
 namespace MeshName {
-	const std::string Triangle = "triangle";
-	const std::string Monkey = "monkey";
-}
+const std::string Triangle = "triangle";
+const std::string Monkey = "monkey";
+} //namespace MeshName
 
 namespace MaterialName {
-	const std::string Default = "default";
+const std::string Default = "default";
 }
 
 class Vulkun {
 private:
 	uint32_t _frame_number = 0;
+	float _delta_time = 0.0f;
 	int _selected_pipeline_idx = 0;
 	bool _is_initialized = false;
 	bool _is_rendering_paused = false;
@@ -79,6 +80,8 @@ private:
 	std::vector<RenderObject> _renderables;
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
+
+	Camera _camera;
 
 	bool _init_vulkan();
 	bool _init_swapchain();
