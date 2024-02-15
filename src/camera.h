@@ -66,4 +66,8 @@ public:
 	glm::mat4 get_view() {
 		return transform;
 	}
+
+	glm::vec3 get_pos() {
+		return glm::vec3(transform[3]);
+	}
 };

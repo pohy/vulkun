@@ -43,6 +43,7 @@ private:
 	int _selected_pipeline_idx = 0;
 	bool _is_initialized = false;
 	bool _is_rendering_paused = false;
+	uint32_t _draw_calls = 0;
 
 	VkExtent2D _window_extent = { 1600, 900 };
 	struct SDL_Window *_window = nullptr;

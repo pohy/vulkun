@@ -320,19 +320,20 @@ bool Vulkun::_init_sync_structures() {
 }
 
 bool Vulkun::_init_imgui() {
-	const uint32_t max_sets = 1000;
+	const uint32_t max_sets = 1; //000;
+	// We'll need more dscriptor sets for textures and stuff
 	VkDescriptorPoolSize pool_sizes[] = {
-		{ VK_DESCRIPTOR_TYPE_SAMPLER, max_sets },
+		// { VK_DESCRIPTOR_TYPE_SAMPLER, max_sets },
 		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, max_sets },
-		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, max_sets },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, max_sets },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, max_sets },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, max_sets },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, max_sets },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, max_sets },
-		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, max_sets },
-		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, max_sets },
-		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, max_sets },
+		// { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, max_sets },
+		// { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, max_sets },
+		// { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, max_sets },
+		// { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, max_sets },
+		// { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, max_sets },
+		// { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, max_sets },
+		// { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, max_sets },
+		// { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, max_sets },
+		// { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, max_sets },
 	};
 
 	VkDescriptorPoolCreateInfo pool_info = {};
@@ -589,10 +590,13 @@ void Vulkun::run() {
 			}
 
 			if (event.type == SDL_WINDOWEVENT) {
-				if (event.window.event == SDL_WINDOW_MINIMIZED) {
+				if (event.window.event == SDL_WINDOW_MINIMIZED || event.window.event == SDL_WINDOW_HIDDEN) {
+					// TODO: Pause rendering when the window is not focused
+					fmt::println("Rendering paused");
 					_is_rendering_paused = true;
 				}
-				if (event.window.event == SDL_WINDOW_MAXIMIZED) {
+				if (event.window.event == SDL_WINDOW_MAXIMIZED || event.window.event == SDL_WINDOW_SHOWN) {
+					fmt::println("Rendering resumed");
 					_is_rendering_paused = false;
 				}
 			}
@@ -617,7 +621,18 @@ void Vulkun::run() {
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 
-		ImGui::ShowDemoWindow();
+		// ImGui::ShowDemoWindow();
+
+		ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
+		ImGui::SetNextWindowBgAlpha(0.35f);
+		const uint32_t pad = 10;
+		ImGui::SetNextWindowPos(ImVec2(pad, _window_extent.height - pad), ImGuiCond_Always, ImVec2(0, 1));
+		ImGui::Begin("Vulkun", nullptr, window_flags);
+		ImGui::Text("Frame time: %.0fms", _delta_time * 1000.0f);
+		ImGui::Text("Draw calls: %d", _draw_calls);
+		glm::vec3 camera_pos = _camera.get_pos();
+		ImGui::Text("Camera pos: %.2f, %.2f, %.2f", camera_pos.x, camera_pos.y, camera_pos.z);
+		ImGui::End();
 
 		const uint8_t *keyboard_state = SDL_GetKeyboardState(nullptr);
 
@@ -635,6 +650,7 @@ void Vulkun::run() {
 
 void Vulkun::_draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_render_object, uint32_t count) {
 	// fmt::println("Drawing {} objects", count);
+	_draw_calls = 0;
 
 	float aspect = (float)_window_extent.width / (float)_window_extent.height;
 
@@ -673,6 +689,7 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_
 
 		// TODO: Count draw calls
 		vkCmdDraw(command_buffer, render_object.pMesh->vertices.size(), 1, 0, 0);
+		_draw_calls++;
 		// fmt::println("\t\tDrawn object");
 	}
 
