@@ -91,6 +91,7 @@ private:
 	bool _init_sync_structures();
 	bool _init_pipelines();
 	bool _init_scene();
+	bool _init_imgui();
 
 	bool _load_shader_module(const char *file_path, VkShaderModule *out_shader_module);
 	void _load_meshes();

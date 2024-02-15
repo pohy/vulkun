@@ -6,6 +6,11 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
 
+#include <imgui.h>
+#include <imgui_impl_osx.h>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_vulkan.h>
+
 #include <VkBootstrap.h>
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -49,6 +54,7 @@ void Vulkun::init() {
 	_is_initialized = _init_framebuffers();
 	_is_initialized = _init_sync_structures();
 	_is_initialized = _init_pipelines();
+	_is_initialized = _init_imgui();
 
 	_load_meshes();
 	_is_initialized = _init_scene();
@@ -313,6 +319,64 @@ bool Vulkun::_init_sync_structures() {
 	return true;
 }
 
+bool Vulkun::_init_imgui() {
+	const uint32_t max_sets = 1000;
+	VkDescriptorPoolSize pool_sizes[] = {
+		{ VK_DESCRIPTOR_TYPE_SAMPLER, max_sets },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, max_sets },
+		{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, max_sets },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, max_sets },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, max_sets },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, max_sets },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, max_sets },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, max_sets },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, max_sets },
+		{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, max_sets },
+		{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, max_sets },
+	};
+
+	VkDescriptorPoolCreateInfo pool_info = {};
+	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_info.pNext = nullptr;
+	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+	pool_info.maxSets = max_sets;
+	pool_info.poolSizeCount = std::size(pool_sizes);
+	pool_info.pPoolSizes = pool_sizes;
+
+	VkDescriptorPool imgui_descriptor_pool;
+	VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr, &imgui_descriptor_pool));
+
+	ImGui::CreateContext();
+	ImGui_ImplSDL2_InitForVulkan(_window);
+
+	ImGui_ImplVulkan_InitInfo imgui_vulkan_init_info = {};
+	imgui_vulkan_init_info.Instance = _instance;
+	imgui_vulkan_init_info.PhysicalDevice = _physical_device;
+	imgui_vulkan_init_info.Device = _device;
+	imgui_vulkan_init_info.Queue = _graphics_queue;
+	imgui_vulkan_init_info.DescriptorPool = imgui_descriptor_pool;
+	imgui_vulkan_init_info.MinImageCount = 3;
+	imgui_vulkan_init_info.ImageCount = 3;
+	imgui_vulkan_init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+	imgui_vulkan_init_info.RenderPass = _render_pass;
+
+	ImGui_ImplVulkan_Init(&imgui_vulkan_init_info);
+
+	// _immediate_submit([=](VkCommandBuffer cmd) {
+	// 	ImGui_ImplVulkan_CreateFontsTexture();
+	// });
+
+	_deletion_queue.push_function([=]() {
+		ImGui_ImplVulkan_Shutdown();
+		ImGui_ImplSDL2_Shutdown();
+		ImGui::DestroyContext();
+
+		vkDestroyDescriptorPool(_device, imgui_descriptor_pool, nullptr);
+	});
+
+	return true;
+}
+
 bool Vulkun::_init_pipelines() {
 	bool success = false;
 
@@ -518,6 +582,8 @@ void Vulkun::run() {
 	while (!should_quit) {
 		float start_time = SDL_GetTicks();
 		while (SDL_PollEvent(&event)) {
+			ImGui_ImplSDL2_ProcessEvent(&event);
+
 			if (event.type == SDL_QUIT) {
 				should_quit = true;
 			}
@@ -536,7 +602,6 @@ void Vulkun::run() {
 					should_quit = true;
 				}
 			}
-
 		}
 
 		if (should_quit) {
@@ -548,9 +613,18 @@ void Vulkun::run() {
 			continue;
 		}
 
+		ImGui_ImplVulkan_NewFrame();
+		ImGui_ImplSDL2_NewFrame();
+		ImGui::NewFrame();
+
+		ImGui::ShowDemoWindow();
+
 		const uint8_t *keyboard_state = SDL_GetKeyboardState(nullptr);
 
-		_camera.handle_input(keyboard_state);
+		if (!ImGui::GetIO().WantCaptureKeyboard) {
+			_camera.handle_input(keyboard_state);
+		}
+
 		_camera.update(_delta_time);
 
 		draw();
@@ -650,6 +724,9 @@ void Vulkun::draw() {
 	 */
 
 	_draw_objects(_main_command_buffer, _renderables.data(), _renderables.size());
+
+	ImGui::Render();
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), _main_command_buffer);
 
 	/**
 	 * E N D   D R A W I N G

@@ -11,6 +11,7 @@ env = Environment(
         "third_party/tinyobjloader",
         "third_party/imgui",
         "third_party/imgui/backends",
+        "third_party/imgui/misc/cpp",
     ],
     LIBPATH="bin",
     LIBS=["SDL2", "imgui"],
@@ -20,7 +21,7 @@ if os == "darwin":
     env.Append(CXXFLAGS=["-std=c++17"])
     env.Append(CPPPATH=[
         "/opt/homebrew/include",
-        "/opt/homebrew/include/SDL2",
+        "/opt/homebrew/include/SDL2", # For imgui which includes SDL as: #include <SDL.h>
     ])
     env.Append(LIBPATH=[
         "third_party/fmt/build",
@@ -48,6 +49,7 @@ env.Library(
         Glob("third_party/imgui/*.cpp"),
         "third_party/imgui/backends/imgui_impl_sdl2.cpp",
         "third_party/imgui/backends/imgui_impl_vulkan.cpp",
+        "third_party/imgui/misc/cpp/imgui_stdlib.cpp",
         imgui_os_impl,
     ],
 )
