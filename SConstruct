@@ -1,13 +1,6 @@
 import platform
 
-# TODO: Building fmt requires a manual build, ugh. It uses C++ modules which is highly incompatible. W/e, ugh
-# Library(
-#     'fmt',
-#     Glob('third_party/fmt/src/*.cc'),
-#     CPPPATH=['third_party/fmt/include'],
-#     CXXFLAGS=["-std=c++20", "-fmodules-ts"],
-#     CPPDEFINES=["FMT_ATTACH_TO_GLOBAL_MODULE"],
-# )
+os = platform.system().lower()
 
 env = Environment(
     CPPPATH=[
@@ -16,14 +9,19 @@ env = Environment(
         "third_party/VulkanMemoryAllocator/include",
         "third_party/glm",
         "third_party/tinyobjloader",
+        "third_party/imgui",
+        "third_party/imgui/backends",
     ],
-    LIBS=["SDL2"],
+    LIBPATH="bin",
+    LIBS=["SDL2", "imgui"],
 )
 
-os = platform.system().lower()
-if os in ["linux", "darwin"]:
+if os == "darwin":
     env.Append(CXXFLAGS=["-std=c++17"])
-    env.Append(CPPPATH=["/opt/homebrew/include"])
+    env.Append(CPPPATH=[
+        "/opt/homebrew/include",
+        "/opt/homebrew/include/SDL2",
+    ])
     env.Append(LIBPATH=[
         "third_party/fmt/build",
         "/opt/homebrew/lib",
@@ -37,7 +35,22 @@ if os == "windows":
         "e:/David/Software/VulkanSDK/1.3.275.0/Lib/",
     ])
     env.Append(LIBS=["vulkan-1", "fmtd"])
-    
+
+imgui_os_impl = "third_party/imgui/backends/imgui_impl_"
+if os == "darwin":
+    imgui_os_impl += "osx.mm"
+if os == "windows":
+    imgui_os_impl += "win32.cpp"
+
+env.Library(
+    "bin/imgui",
+    [
+        Glob("third_party/imgui/*.cpp"),
+        "third_party/imgui/backends/imgui_impl_sdl2.cpp",
+        "third_party/imgui/backends/imgui_impl_vulkan.cpp",
+        imgui_os_impl,
+    ],
+)
 
 env.Tool("compilation_db")
 env.CompilationDatabase()
@@ -46,9 +59,10 @@ env.Program(
     "bin/vulkun",
     [
         Glob("src/*.cpp"),
-        Glob("src/**/*.cpp"),
-        # Glob("third_party/*.cpp"),
         Glob("third_party/vk-bootstrap/src/*.cpp"),
-        # Glob("third_party/fmt/src/*.cc"),
+        # Glob("third_party/imgui/*.cpp"),
+        # "third_party/imgui/backends/imgui_impl_sdl2.cpp",
+        # "third_party/imgui/backends/imgui_impl_vulkan.cpp",
+        # imgui_os_impl,
     ],
 )
