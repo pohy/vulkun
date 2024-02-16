@@ -18,23 +18,34 @@ env = Environment(
 )
 
 if os == "darwin":
-    env.Append(CXXFLAGS=["-std=c++17"])
-    env.Append(CPPPATH=[
-        "/opt/homebrew/include",
-        "/opt/homebrew/include/SDL2", # For imgui which includes SDL as: #include <SDL.h>
-    ])
-    env.Append(LIBPATH=[
-        "third_party/fmt/build",
-        "/opt/homebrew/lib",
-    ])
+    env.Append(CXXFLAGS=["-std=c++20"])
+    env.Append(
+        CPPPATH=[
+            "/opt/homebrew/include",
+            "/opt/homebrew/include/SDL2",  # For imgui which includes SDL as: #include <SDL.h>
+        ]
+    )
+    env.Append(
+        LIBPATH=[
+            "third_party/fmt/build",
+            "/opt/homebrew/lib",
+        ]
+    )
     env.Append(LIBS=["vulkan", "fmt"])
 if os == "windows":
-    env.Append(CXXFLAGS=["/std:c++17", "/EHsc"])
-    env.Append(CPPPATH=["e:/David/Software/VulkanSDK/1.3.275.0/Include/"])
-    env.Append(LIBPATH=[
-        "third_party/fmt/build/Debug/",
-        "e:/David/Software/VulkanSDK/1.3.275.0/Lib/",
-    ])
+    env.Append(CXXFLAGS=["/std:c++20", "/EHsc", "/permissive"])
+    env.Append(
+        CPPPATH=[
+            "e:/David/Software/VulkanSDK/1.3.275.0/Include/",
+            "e:/David/Software/VulkanSDK/1.3.275.0/Include/SDL2/",
+        ]
+    )
+    env.Append(
+        LIBPATH=[
+            "third_party/fmt/build/Debug/",
+            "e:/David/Software/VulkanSDK/1.3.275.0/Lib/",
+        ]
+    )
     env.Append(LIBS=["vulkan-1", "fmtd"])
 
 imgui_os_impl = "third_party/imgui/backends/imgui_impl_"

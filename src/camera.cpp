@@ -2,7 +2,10 @@
 
 void Camera::handle_input(const uint8_t *keyboard_state, Mouse &mouse) {
 	_handle_keyboard(keyboard_state);
-	_rot_amount = mouse.delta;
+
+	if (mouse.right) {
+		_rot_amount = mouse.delta;
+	}
 }
 
 glm::mat4 Camera::get_projection(float aspect) {
