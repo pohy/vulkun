@@ -9,8 +9,8 @@
 
 class Camera {
 private:
-	glm::vec3 _move_dir;
-	glm::vec2 _rot_amount;
+	glm::vec3 _move_dir = glm::vec3(0);
+	glm::vec2 _rot_amount = glm::vec2(0);
 
 	glm::mat4 _transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, -2, -10));
 

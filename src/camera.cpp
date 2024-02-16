@@ -6,6 +6,13 @@ void Camera::handle_input(const uint8_t *keyboard_state, Mouse &mouse) {
 	if (mouse.right) {
 		_rot_amount = mouse.delta;
 	}
+	if (mouse.right_pressed) {
+		SDL_SetRelativeMouseMode(SDL_TRUE);
+	}
+	if (mouse.right_released) {
+		_rot_amount = glm::vec2(0);
+		SDL_SetRelativeMouseMode(SDL_FALSE);
+	}
 }
 
 glm::mat4 Camera::get_projection(float aspect) {
@@ -39,17 +46,18 @@ void Camera::_handle_keyboard(const uint8_t *keyboard_state) {
 }
 
 void Camera::update(float delta_time) {
+	// https://community.khronos.org/t/get-direction-from-transformation-matrix-or-quat/65502/2
+	glm::vec3 right = glm::inverse(_transform)[0];
+	glm::vec3 up = glm::inverse(_transform)[1];
+	glm::vec3 forward = glm::inverse(_transform)[2];
+
 	if (glm::length(_move_dir) > 0.0f) {
 		_move_dir = glm::normalize(_move_dir);
 	}
 
 	if (glm::length(_rot_amount) > 0.0f) {
-		// https://community.khronos.org/t/get-direction-from-transformation-matrix-or-quat/65502/2
-		glm::vec3 up = _transform[1];
-		glm::vec3 right = _transform[0];
-
-		_transform = glm::rotate(_transform, _rot_amount.x * _mouse_sens * delta_time, up);
 		_transform = glm::rotate(_transform, _rot_amount.y * _mouse_sens * delta_time, right);
+		_transform = glm::rotate(_transform, _rot_amount.x * _mouse_sens * delta_time, glm::vec3(0, 1, 0));
 	}
 
 	if (_is_sprinting) {

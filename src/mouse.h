@@ -4,25 +4,7 @@
 #include <fmt/core.h>
 #include <glm/glm.hpp>
 
-class Mouse {
-private:
-	bool _prev_has_focus = false;
-
-	void _update_delta(glm::ivec2 new_pos) {
-		bool has_focus = SDL_GetMouseFocus() != nullptr;
-
-		// Prevent jumping when the cursor returns to the window at a different position
-		if (_prev_has_focus && has_focus) {
-			delta = new_pos - pos;
-		} else {
-			delta.x = 0;
-			delta.y = 0;
-		}
-
-		_prev_has_focus = has_focus;
-	}
-
-public:
+struct Mouse {
 	glm::ivec2 pos;
 	glm::ivec2 delta;
 
@@ -35,11 +17,9 @@ public:
 	bool right_released = false;
 
 	void update(float delta_time) {
-		glm::ivec2 new_pos;
-		uint32_t buttons = SDL_GetMouseState(&new_pos.x, &new_pos.y);
+		SDL_GetRelativeMouseState(&delta.x, &delta.y);
 
-		_update_delta(new_pos);
-		pos = new_pos;
+		uint32_t buttons = SDL_GetMouseState(&pos.x, &pos.y);
 
 		bool prev_left = left;
 		// TODO: Figure out why we use bitwise AND here instead of a logical AND
