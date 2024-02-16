@@ -4,6 +4,7 @@
 #include "vk_mesh.h"
 #include "vk_types.h"
 #include "camera.h"
+#include "mouse.h"
 
 #include <glm/glm.hpp>
 
@@ -82,6 +83,7 @@ private:
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
 
+	Mouse _mouse;
 	Camera _camera;
 
 	bool _init_vulkan();

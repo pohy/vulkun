@@ -582,6 +582,7 @@ void Vulkun::run() {
 
 	while (!should_quit) {
 		float start_time = SDL_GetTicks();
+
 		while (SDL_PollEvent(&event)) {
 			ImGui_ImplSDL2_ProcessEvent(&event);
 
@@ -604,6 +605,7 @@ void Vulkun::run() {
 			if (event.type == SDL_KEYUP) {
 				if (event.key.keysym.sym == SDLK_ESCAPE) {
 					should_quit = true;
+					break;
 				}
 			}
 		}
@@ -627,19 +629,29 @@ void Vulkun::run() {
 		ImGui::SetNextWindowBgAlpha(0.35f);
 		const uint32_t pad = 10;
 		ImGui::SetNextWindowPos(ImVec2(pad, _window_extent.height - pad), ImGuiCond_Always, ImVec2(0, 1));
+
 		ImGui::Begin("Vulkun", nullptr, window_flags);
+
 		ImGui::Text("Frame time: %.0fms", _delta_time * 1000.0f);
+
 		ImGui::Text("Draw calls: %d", _draw_calls);
+
 		glm::vec3 camera_pos = _camera.get_pos();
 		ImGui::Text("Camera pos: %.2f, %.2f, %.2f", camera_pos.x, camera_pos.y, camera_pos.z);
+
+		ImGui::Text("Mouse pos: %d, %d", _mouse.pos.x, _mouse.pos.y);
+		ImGui::Text("Mouse delta: %d, %d", _mouse.delta.x, _mouse.delta.y);
+		ImGui::Text("Mouse left: %d, right: %d", _mouse.left, _mouse.right);
+
 		ImGui::End();
 
 		const uint8_t *keyboard_state = SDL_GetKeyboardState(nullptr);
 
 		if (!ImGui::GetIO().WantCaptureKeyboard) {
-			_camera.handle_input(keyboard_state);
+			_camera.handle_input(keyboard_state, _mouse);
 		}
 
+		_mouse.update(_delta_time);
 		_camera.update(_delta_time);
 
 		draw();
