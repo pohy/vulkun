@@ -460,7 +460,7 @@ bool Vulkun::_init_scene() {
 	RenderObject monkey = {
 		.pMesh = get_mesh(MeshName::Monkey),
 		.pMaterial = get_material(MaterialName::Default),
-		.transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, 2, 0)),
+		.transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, -2, 0)),
 		.update_push_constants = [=](PushConstants &push_constants) {
 			push_constants.render_matrix *= glm::translate(glm::vec3(0, 0, 2 + sin(_frame_number * 0.02f) * 6));
 			push_constants.render_matrix *= glm::rotate(sin(_frame_number * 0.03f) * 0.2f, glm::vec3(1, 0, 0));
@@ -470,7 +470,7 @@ bool Vulkun::_init_scene() {
 
 	for (int x = -20; x <= 20; ++x) {
 		for (int y = -20; y <= 20; ++y) {
-			glm::mat4 translation = glm::translate(glm::mat4{ 1.0f }, glm::vec3(x, -abs(y) * y * 0.1f, y));
+			glm::mat4 translation = glm::translate(glm::mat4{ 1.0f }, glm::vec3(x, abs(y) * y * 0.1f, y));
 			glm::mat4 scale = glm::scale(glm::mat4{ 1.0f }, glm::vec3(0.2f));
 			RenderObject triangle = {
 				.pMesh = get_mesh(MeshName::Triangle),

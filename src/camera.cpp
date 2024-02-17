@@ -16,9 +16,7 @@ void Camera::handle_input(const uint8_t *keyboard_state, Mouse &mouse) {
 }
 
 glm::mat4 Camera::get_projection(float aspect) {
-	auto projection = glm::perspective(glm::radians(fov), aspect, near, far);
-	projection[1][1] *= -1;
-	return projection;
+	return glm::perspective(glm::radians(fov), aspect, near, far);
 }
 
 void Camera::_handle_keyboard(const uint8_t *keyboard_state) {
