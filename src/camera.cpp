@@ -1,5 +1,7 @@
 #include "camera.h"
 
+#include <imgui.h>
+
 void Camera::handle_input(const uint8_t *keyboard_state, Mouse &mouse) {
 	_handle_keyboard(keyboard_state);
 
@@ -15,52 +17,72 @@ void Camera::handle_input(const uint8_t *keyboard_state, Mouse &mouse) {
 	}
 }
 
+glm::mat4 Camera::get_view() {
+	return glm::lookAt(_pos, _pos + _forward, _up);
+}
+
 glm::mat4 Camera::get_projection(float aspect) {
 	return glm::perspective(glm::radians(fov), aspect, near, far);
 }
 
-void Camera::_handle_keyboard(const uint8_t *keyboard_state) {
-	_move_dir = glm::vec3(0);
-	if (keyboard_state[SDL_SCANCODE_W] || keyboard_state[SDL_SCANCODE_UP]) {
-		_move_dir.z += 1;
-	}
-	if (keyboard_state[SDL_SCANCODE_S] || keyboard_state[SDL_SCANCODE_DOWN]) {
-		_move_dir.z -= 1;
-	}
-	if (keyboard_state[SDL_SCANCODE_A] || keyboard_state[SDL_SCANCODE_LEFT]) {
-		_move_dir.x += 1;
-	}
-	if (keyboard_state[SDL_SCANCODE_D] || keyboard_state[SDL_SCANCODE_RIGHT]) {
-		_move_dir.x -= 1;
-	}
-	if (keyboard_state[SDL_SCANCODE_SPACE]) {
-		_move_dir.y -= 1;
-	}
-	if (keyboard_state[SDL_SCANCODE_C]) {
-		_move_dir.y += 1;
-	}
-
-	_is_sprinting = keyboard_state[SDL_SCANCODE_LSHIFT];
-}
-
 void Camera::update(float delta_time) {
-	// https://community.khronos.org/t/get-direction-from-transformation-matrix-or-quat/65502/2
-	glm::vec3 right = glm::inverse(_transform)[0];
-	glm::vec3 up = glm::inverse(_transform)[1];
-	glm::vec3 forward = glm::inverse(_transform)[2];
+	ImGui::Begin("Camera");
+	ImGui::SliderFloat("FOV", &fov, 1.0f, 180.0f);
+	ImGui::SliderFloat("Sensitivity", &_mouse_sens, 1.0f, 10.0f);
+	ImGui::SliderFloat("Speed", &_speed, 1.0f, 100.0f);
+	ImGui::SliderFloat("Sprint Multiplier", &_sprint_mult, 1.0f, 10.0f);
+	ImGui::Text("Position: (%.2f, %.2f, %.2f)", _pos.x, _pos.y, _pos.z);
+	ImGui::Text("Yaw: %.2f", _yaw);
+	ImGui::Text("Pitch: %.2f", _pitch);
+	ImGui::Text("Forward: (%.2f, %.2f, %.2f)", _forward.x, _forward.y, _forward.z);
+	ImGui::Text("Right: (%.2f, %.2f, %.2f)", _right.x, _right.y, _right.z);
+	ImGui::Text("Up: (%.2f, %.2f, %.2f)", _up.x, _up.y, _up.z);
+	ImGui::End();
 
-	if (glm::length(_move_dir) > 0.0f) {
-		_move_dir = glm::normalize(_move_dir);
-	}
+	_yaw += _rot_amount.x * _mouse_sens * delta_time;
+	_pitch += _rot_amount.y * _mouse_sens * delta_time;
 
-	if (glm::length(_rot_amount) > 0.0f) {
-		_transform = glm::rotate(_transform, _rot_amount.y * _mouse_sens * delta_time, right);
-		_transform = glm::rotate(_transform, _rot_amount.x * _mouse_sens * delta_time, glm::vec3(0, 1, 0));
+	glm::vec3 direction{
+		cos(glm::radians(_yaw)) * cos(glm::radians(_pitch)),
+		sin(glm::radians(_pitch)),
+		sin(glm::radians(_yaw)) * cos(glm::radians(_pitch))
+	};
+	_forward = glm::normalize(direction);
+	_right = glm::normalize(glm::cross(_forward, _up));
+
+	if (glm::length(_move_input) > 0.0f) {
+		_move_input = glm::normalize(_move_input);
 	}
 
 	if (_is_sprinting) {
-		_move_dir *= _sprint_mult;
+		_move_input *= _sprint_mult;
 	}
 
-	_transform = glm::translate(_transform, _move_dir * _speed * delta_time);
+	glm::vec3 pos_delta = _forward * _move_input.z + _right * _move_input.x + _up * _move_input.y;
+	_pos += pos_delta * _speed * delta_time;
+}
+
+void Camera::_handle_keyboard(const uint8_t *keyboard_state) {
+	// TODO: _move_input would be a more appropriate name
+	_move_input = glm::vec3(0);
+	if (keyboard_state[SDL_SCANCODE_W] || keyboard_state[SDL_SCANCODE_UP]) {
+		_move_input.z += 1;
+	}
+	if (keyboard_state[SDL_SCANCODE_S] || keyboard_state[SDL_SCANCODE_DOWN]) {
+		_move_input.z -= 1;
+	}
+	if (keyboard_state[SDL_SCANCODE_A] || keyboard_state[SDL_SCANCODE_LEFT]) {
+		_move_input.x -= 1;
+	}
+	if (keyboard_state[SDL_SCANCODE_D] || keyboard_state[SDL_SCANCODE_RIGHT]) {
+		_move_input.x += 1;
+	}
+	if (keyboard_state[SDL_SCANCODE_SPACE]) {
+		_move_input.y -= 1;
+	}
+	if (keyboard_state[SDL_SCANCODE_C]) {
+		_move_input.y += 1;
+	}
+
+	_is_sprinting = keyboard_state[SDL_SCANCODE_LSHIFT];
 }

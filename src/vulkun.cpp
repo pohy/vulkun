@@ -460,10 +460,10 @@ bool Vulkun::_init_scene() {
 	RenderObject monkey = {
 		.pMesh = get_mesh(MeshName::Monkey),
 		.pMaterial = get_material(MaterialName::Default),
-		.transform = glm::translate(glm::mat4(1.0f), glm::vec3(0, -2, 0)),
+		.transform = glm::translate(glm::mat4{1}, glm::vec3{0, -2, 0}),
 		.update_push_constants = [=](PushConstants &push_constants) {
-			push_constants.render_matrix *= glm::translate(glm::vec3(0, 0, 2 + sin(_frame_number * 0.02f) * 6));
-			push_constants.render_matrix *= glm::rotate(sin(_frame_number * 0.03f) * 0.2f, glm::vec3(1, 0, 0));
+			// push_constants.render_matrix *= glm::translate(glm::vec3(0, 0, 2 + sin(_frame_number * 0.02f) * 6));
+			push_constants.render_matrix *= glm::rotate(sin(_frame_number * 0.03f) * 0.8f, glm::vec3(1, 0, 0));
 		},
 	};
 	_renderables.push_back(monkey);
@@ -593,11 +593,9 @@ void Vulkun::run() {
 			if (event.type == SDL_WINDOWEVENT) {
 				if (event.window.event == SDL_WINDOW_MINIMIZED || event.window.event == SDL_WINDOW_HIDDEN) {
 					// TODO: Pause rendering when the window is not focused
-					fmt::println("Rendering paused");
 					_is_rendering_paused = true;
 				}
 				if (event.window.event == SDL_WINDOW_MAXIMIZED || event.window.event == SDL_WINDOW_SHOWN) {
-					fmt::println("Rendering resumed");
 					_is_rendering_paused = false;
 				}
 			}
@@ -665,6 +663,8 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_
 	_draw_calls = 0;
 
 	float aspect = (float)_window_extent.width / (float)_window_extent.height;
+	glm::mat4 projection = _camera.get_projection(aspect);
+	glm::mat4 view = _camera.get_view();
 
 	Material *pLast_material = nullptr;
 	Mesh *pLast_mesh = nullptr;
@@ -679,7 +679,9 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_
 		}
 
 		// fmt::println("\t\tObject transform: {}", glm::to_string(object.transform));
-		glm::mat4 mesh_matrix = _camera.get_projection(aspect) * _camera.get_view() * render_object.transform;
+
+		// Mesh matrix = Model View Projection matrix
+		glm::mat4 mesh_matrix = projection * view * render_object.transform;
 		// fmt::println("\t\tModel matrix: {}", glm::to_string(mesh_matrix));
 
 		PushConstants push_constants = {
@@ -726,7 +728,7 @@ void Vulkun::draw() {
 	VK_CHECK(vkBeginCommandBuffer(_main_command_buffer, &cmd_begin_info));
 
 	VkClearValue clear_color;
-	float flash = abs(sin(_frame_number / 120.0f));
+	float flash = abs(sin(_frame_number / 360.0f));
 	clear_color.color = { { 1.0f - flash, flash, flash * 0.5f, 1.0f } };
 
 	VkClearValue clear_depth;

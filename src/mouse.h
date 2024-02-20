@@ -5,8 +5,8 @@
 #include <glm/glm.hpp>
 
 struct Mouse {
-	glm::ivec2 pos;
-	glm::ivec2 delta;
+	glm::ivec2 pos{0};
+	glm::ivec2 delta{0};
 
 	bool left = false;
 	bool left_pressed = false;
