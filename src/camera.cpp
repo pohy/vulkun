@@ -1,6 +1,7 @@
 #include "camera.h"
 
 #include <imgui.h>
+#include <glm/gtc/matrix_transform.hpp>
 
 void Camera::handle_input(const uint8_t *keyboard_state, Mouse &mouse) {
 	_handle_keyboard(keyboard_state);
@@ -18,7 +19,7 @@ void Camera::handle_input(const uint8_t *keyboard_state, Mouse &mouse) {
 }
 
 glm::mat4 Camera::get_view() {
-	return glm::lookAt(_pos, _pos + _forward, _up);
+	return glm::lookAt(transform.pos(), transform.pos() + transform.forward(), transform.up());
 }
 
 glm::mat4 Camera::get_projection(float aspect) {
@@ -31,24 +32,19 @@ void Camera::update(float delta_time) {
 	ImGui::SliderFloat("Sensitivity", &_mouse_sens, 1.0f, 10.0f);
 	ImGui::SliderFloat("Speed", &_speed, 1.0f, 100.0f);
 	ImGui::SliderFloat("Sprint Multiplier", &_sprint_mult, 1.0f, 10.0f);
-	ImGui::Text("Position: (%.2f, %.2f, %.2f)", _pos.x, _pos.y, _pos.z);
-	ImGui::Text("Yaw: %.2f", _yaw);
-	ImGui::Text("Pitch: %.2f", _pitch);
-	ImGui::Text("Forward: (%.2f, %.2f, %.2f)", _forward.x, _forward.y, _forward.z);
-	ImGui::Text("Right: (%.2f, %.2f, %.2f)", _right.x, _right.y, _right.z);
-	ImGui::Text("Up: (%.2f, %.2f, %.2f)", _up.x, _up.y, _up.z);
+	ImGui::Text("Position: (%.2f, %.2f, %.2f)", transform.pos().x, transform.pos().y, transform.pos().z);
+	ImGui::Text("Yaw: %.2f", transform.rot().y);
+	ImGui::Text("Pitch: %.2f", transform.rot().x);
+	ImGui::Text("Forward: (%.2f, %.2f, %.2f)", transform.forward().x, transform.forward().y, transform.forward().z);
+	ImGui::Text("Right: (%.2f, %.2f, %.2f)", transform.right().x, transform.right().y, transform.right().z);
+	ImGui::Text("Up: (%.2f, %.2f, %.2f)", transform.up().x, transform.up().y, transform.up().z);
 	ImGui::End();
 
-	_yaw += _rot_amount.x * _mouse_sens * delta_time;
-	_pitch += _rot_amount.y * _mouse_sens * delta_time;
+	transform.rotate(_rot_amount.x * _mouse_sens * delta_time, glm::vec3(0, 1, 0));
+	transform.rotate(_rot_amount.y * _mouse_sens * delta_time, transform.right());
 
-	glm::vec3 direction{
-		cos(glm::radians(_yaw)) * cos(glm::radians(_pitch)),
-		sin(glm::radians(_pitch)),
-		sin(glm::radians(_yaw)) * cos(glm::radians(_pitch))
-	};
-	_forward = glm::normalize(direction);
-	_right = glm::normalize(glm::cross(_forward, _up));
+	glm::vec3 rot = transform.rot();
+	transform.set_rot(glm::vec3(glm::clamp(rot.x, _vertical_clamp.x, _vertical_clamp.y), rot.y, rot.z));
 
 	if (glm::length(_move_input) > 0.0f) {
 		_move_input = glm::normalize(_move_input);
@@ -58,12 +54,11 @@ void Camera::update(float delta_time) {
 		_move_input *= _sprint_mult;
 	}
 
-	glm::vec3 pos_delta = _forward * _move_input.z + _right * _move_input.x + _up * _move_input.y;
-	_pos += pos_delta * _speed * delta_time;
+	glm::vec3 pos_delta = transform.forward() * _move_input.z + transform.right() * _move_input.x + transform.up() * _move_input.y;
+	transform.translate(pos_delta * _speed * delta_time);
 }
 
 void Camera::_handle_keyboard(const uint8_t *keyboard_state) {
-	// TODO: _move_input would be a more appropriate name
 	_move_input = glm::vec3(0);
 	if (keyboard_state[SDL_SCANCODE_W] || keyboard_state[SDL_SCANCODE_UP]) {
 		_move_input.z += 1;
