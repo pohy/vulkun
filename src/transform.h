@@ -14,11 +14,15 @@ private:
 	glm::vec3 _right{ 1, 0, 0 };
 
 	void _update_directions() {
+		glm::vec3 rot_rad = glm::radians(_rot);
+
 		_forward = glm::normalize(glm::vec3(
-				cos(glm::radians(_rot.y)) * cos(glm::radians(_rot.x)),
-				sin(glm::radians(_rot.x)),
-				sin(glm::radians(_rot.y)) * cos(glm::radians(_rot.x))));
+				cos(rot_rad.y) * cos(rot_rad.x),
+				sin(rot_rad.x),
+				sin(rot_rad.y) * cos(rot_rad.x)));
+
 		_right = glm::normalize(glm::cross(_forward, _up));
+
 		_up = glm::normalize(glm::cross(_right, _forward));
 	}
 
@@ -26,6 +30,7 @@ public:
 	const glm::vec3 pos() const { return _pos; }
 	const glm::vec3 rot() const { return _rot; }
 	const glm::vec3 scale() const { return _scale; }
+
 	const glm::vec3 forward() const { return _forward; }
 	const glm::vec3 up() const { return _up; }
 	const glm::vec3 right() const { return _right; }
@@ -53,4 +58,11 @@ public:
 
 		_update_directions();
 	}
+
+	void set_forward(glm::vec3 forward) { _forward = forward; }
+	void set_right(glm::vec3 right) { _right = right; }
+	void set_up(glm::vec3 up) { _up = up; }
+
+	void set_scale(float scale) { _scale = glm::vec3(scale); }
+	void set_scale(glm::vec3 scale) { _scale = scale; }
 };

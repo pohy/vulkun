@@ -45,6 +45,7 @@ void Camera::update(float delta_time) {
 
 	glm::vec3 rot = transform.rot();
 	transform.set_rot(glm::vec3(glm::clamp(rot.x, _vertical_clamp.x, _vertical_clamp.y), rot.y, rot.z));
+	transform.set_up(glm::vec3(0, 1, 0));
 
 	if (glm::length(_move_input) > 0.0f) {
 		_move_input = glm::normalize(_move_input);
