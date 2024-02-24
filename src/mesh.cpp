@@ -1,4 +1,4 @@
-#include "vk_mesh.h"
+#include "mesh.h"
 
 #include <fmt/core.h>
 #include <tiny_obj_loader.h>

@@ -1,8 +1,5 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include <vk_mem_alloc.h>
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
@@ -21,11 +18,17 @@ struct AllocatedImage {
 };
 
 // TODO: Print stacktrace on error
-#define VK_CHECK(x)                                                          \
-	do {                                                                     \
-		VkResult err = x;                                                    \
-		if (err) {                                                           \
-			fmt::println("Detected Vulkan error: {}", string_VkResult(err)); \
-			abort();                                                         \
-		}                                                                    \
-	} while (0)
+#define VK_CHECK(param)                                                             \
+	if (param) {                                                                    \
+		VkResult err = param;                                                       \
+		fmt::println(stderr, "🔥 Detected Vulkan error: {}", string_VkResult(err)); \
+		abort();                                                                    \
+	} else                                                                          \
+		((void)0)
+
+#define ASSERT_MSG(param, msg)              \
+	if (!(param)) {                         \
+		fmt::println(stderr, "🔥 {}", msg); \
+		abort();                            \
+	} else                                  \
+		((void)0)\

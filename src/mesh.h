@@ -6,6 +6,11 @@
 
 #include <vector>
 
+namespace MeshName {
+const std::string Triangle = "triangle";
+const std::string Monkey = "monkey";
+}
+
 struct VertexInputDescription {
 	std::vector<VkVertexInputBindingDescription> bindings;
 	std::vector<VkVertexInputAttributeDescription> attributes;

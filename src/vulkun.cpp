@@ -43,7 +43,7 @@ void Vulkun::init() {
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 	_window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, window_flags);
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		SDL_DestroyWindow(_window);
 	});
 
@@ -82,7 +82,7 @@ bool Vulkun::_init_vulkan() {
 	_instance = vkb_inst.instance;
 	_debug_messenger = vkb_inst.debug_messenger;
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		vkb::destroy_debug_utils_messenger(_instance, _debug_messenger);
 		vkDestroyInstance(_instance, nullptr);
 	});
@@ -104,7 +104,7 @@ bool Vulkun::_init_vulkan() {
 	_device = vkb_device.device;
 	_physical_device = physical_device.physical_device;
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		vkDestroyDevice(_device, nullptr);
 		vkDestroySurfaceKHR(_instance, _surface, nullptr);
 	});
@@ -118,7 +118,7 @@ bool Vulkun::_init_vulkan() {
 	allocator_info.instance = _instance;
 	vmaCreateAllocator(&allocator_info, &_allocator);
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		vmaDestroyAllocator(_allocator);
 	});
 
@@ -139,7 +139,7 @@ bool Vulkun::_init_swapchain() {
 	_swapchain_image_views = vkb_swapchain.get_image_views().value();
 	_swapchain_image_format = vkb_swapchain.image_format;
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		vkDestroySwapchainKHR(_device, _swapchain, nullptr);
 	});
 
@@ -156,7 +156,7 @@ bool Vulkun::_init_swapchain() {
 
 	VK_CHECK(vkCreateImageView(_device, &depth_image_view_info, nullptr, &_depth_image_view));
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		vkDestroyImageView(_device, _depth_image_view, nullptr);
 		vmaDestroyImage(_allocator, _depth_image.image, _depth_image.allocation);
 	});
@@ -180,7 +180,7 @@ bool Vulkun::_init_commands() {
 	cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 	VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_alloc_info, &_main_command_buffer));
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		vkDestroyCommandPool(_device, _command_pool, nullptr);
 	});
 
@@ -256,7 +256,7 @@ bool Vulkun::_init_default_renderpass() {
 
 	VK_CHECK(vkCreateRenderPass(_device, &render_pass_info, nullptr, &_render_pass));
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		vkDestroyRenderPass(_device, _render_pass, nullptr);
 	});
 
@@ -283,7 +283,7 @@ bool Vulkun::_init_framebuffers() {
 		framebuffer_info.pAttachments = &attachments[0];
 		VK_CHECK(vkCreateFramebuffer(_device, &framebuffer_info, nullptr, &_framebuffers[i]));
 
-		_deletion_queue.push_function([=]() {
+		_deletion_queue.push_function([=, this]() {
 			vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
 			vkDestroyImageView(_device, _swapchain_image_views[i], nullptr);
 		});
@@ -300,7 +300,7 @@ bool Vulkun::_init_sync_structures() {
 
 	VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_render_fence));
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		vkDestroyFence(_device, _render_fence, nullptr);
 	});
 
@@ -311,7 +311,7 @@ bool Vulkun::_init_sync_structures() {
 	VK_CHECK(vkCreateSemaphore(_device, &semaphore_info, nullptr, &_present_semaphore));
 	VK_CHECK(vkCreateSemaphore(_device, &semaphore_info, nullptr, &_render_semaphore));
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		vkDestroySemaphore(_device, _present_semaphore, nullptr);
 		vkDestroySemaphore(_device, _render_semaphore, nullptr);
 	});
@@ -363,11 +363,7 @@ bool Vulkun::_init_imgui() {
 
 	ImGui_ImplVulkan_Init(&imgui_vulkan_init_info);
 
-	// _immediate_submit([=](VkCommandBuffer cmd) {
-	// 	ImGui_ImplVulkan_CreateFontsTexture();
-	// });
-
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplSDL2_Shutdown();
 		ImGui::DestroyContext();
@@ -397,7 +393,7 @@ bool Vulkun::_init_pipelines() {
 	VkPipelineLayout pipeline_layout;
 	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &pipeline_layout));
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		vkDestroyPipelineLayout(_device, pipeline_layout, nullptr);
 	});
 
@@ -449,7 +445,7 @@ bool Vulkun::_init_pipelines() {
 
 	create_material(MaterialName::Default, pipeline, pipeline_layout);
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		vkDestroyPipeline(_device, pipeline, nullptr);
 	});
 
@@ -457,27 +453,16 @@ bool Vulkun::_init_pipelines() {
 }
 
 bool Vulkun::_init_scene() {
-	RenderObject monkey = {
-		.pMesh = get_mesh(MeshName::Monkey),
-		.pMaterial = get_material(MaterialName::Default),
-		.transform = glm::translate(glm::mat4{1}, glm::vec3{0, -2, 0}),
-		.update_push_constants = [=](PushConstants &push_constants) {
-			// push_constants.render_matrix *= glm::translate(glm::vec3(0, 0, 2 + sin(_frame_number * 0.02f) * 6));
-			push_constants.render_matrix *= glm::rotate(sin(_frame_number * 0.03f) * 0.8f, glm::vec3(1, 0, 0));
-		},
-	};
-	_renderables.push_back(monkey);
+	IGameObject *pMonkey = new Monkey(*this);
+	pMonkey->transform.translate(glm::vec3{ 0, -2, 0 });
+	_game_objects.push_back(pMonkey);
 
 	for (int x = -20; x <= 20; ++x) {
 		for (int y = -20; y <= 20; ++y) {
-			glm::mat4 translation = glm::translate(glm::mat4{ 1.0f }, glm::vec3(x, abs(y) * y * 0.1f, y));
-			glm::mat4 scale = glm::scale(glm::mat4{ 1.0f }, glm::vec3(0.2f));
-			RenderObject triangle = {
-				.pMesh = get_mesh(MeshName::Triangle),
-				.pMaterial = get_material(MaterialName::Default),
-				.transform = translation * scale,
-			};
-			_renderables.push_back(triangle);
+			IGameObject *pTriangle = new Triangle(*this);
+			pTriangle->transform.translate(glm::vec3(x, abs(y) * y * 0.1f, y));
+			pTriangle->transform.set_scale(glm::vec3(0.2f));
+			_game_objects.push_back(pTriangle);
 		}
 	}
 
@@ -515,7 +500,7 @@ bool Vulkun::_load_shader_module(const char *file_path, VkShaderModule *out_shad
 
 	*out_shader_module = shader_module;
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		// TODO: It seems that the shader module can be destroyed immediately after pipeline creation.
 		vkDestroyShaderModule(_device, shader_module, nullptr);
 	});
@@ -564,7 +549,7 @@ void Vulkun::_upload_mesh(Mesh &mesh) {
 			&mesh.vertex_buffer.allocation,
 			nullptr));
 
-	_deletion_queue.push_function([=]() {
+	_deletion_queue.push_function([=, this]() {
 		vmaDestroyBuffer(_allocator, mesh.vertex_buffer.buffer, mesh.vertex_buffer.allocation);
 	});
 
@@ -621,7 +606,17 @@ void Vulkun::run() {
 		ImGui_ImplSDL2_NewFrame();
 		ImGui::NewFrame();
 
-		// ImGui::ShowDemoWindow();
+		static bool show_demo = false;
+		ImGui::BeginMainMenuBar();
+		if (ImGui::BeginMenu("Toggle demo")) {
+			show_demo = !show_demo;
+			ImGui::EndMenu();
+		}
+		ImGui::EndMainMenuBar();
+
+		if (show_demo) {
+			ImGui::ShowDemoWindow(&show_demo);
+		}
 
 		ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoMove;
 		ImGui::SetNextWindowBgAlpha(0.35f);
@@ -652,13 +647,18 @@ void Vulkun::run() {
 		_mouse.update(_delta_time);
 		_camera.update(_delta_time);
 
+		for (auto &game_object : _game_objects) {
+			game_object->update(_delta_time);
+		}
+
 		draw();
 
 		_delta_time = (SDL_GetTicks() - start_time) / 1000.0f;
 	}
 }
 
-void Vulkun::_draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_render_object, uint32_t count) {
+// TODO: Figure out why the "pointer" approach ends up pointing to a nullptr when accessing the render object's material
+void Vulkun::_draw_objects(VkCommandBuffer command_buffer, IGameObject *_, uint32_t __) {
 	// fmt::println("Drawing {} objects", count);
 	_draw_calls = 0;
 
@@ -668,11 +668,16 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_
 
 	Material *pLast_material = nullptr;
 	Mesh *pLast_mesh = nullptr;
-	for (uint32_t i = 0; i < count; ++i) {
+
+	for (uint32_t i = 0; i < _game_objects.size(); ++i) {
 		// fmt::println("\tDrawing object {}", i);
-		RenderObject &render_object = pFirst_render_object[i];
+		IGameObject &game_object = *_game_objects[i];
+		RenderObject &render_object = game_object.render_object;
 
 		if (pLast_material != render_object.pMaterial) {
+			ASSERT_MSG(render_object.pMaterial != nullptr, "Render object has no material");
+			ASSERT_MSG(render_object.pMaterial->pipeline != VK_NULL_HANDLE, "Material has no pipeline");
+
 			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_object.pMaterial->pipeline);
 			pLast_material = render_object.pMaterial;
 			// fmt::println("\t\tBound pipeline");
@@ -681,16 +686,14 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_
 		// fmt::println("\t\tObject transform: {}", glm::to_string(object.transform));
 
 		// Mesh matrix = Model View Projection matrix
-		glm::mat4 mesh_matrix = projection * view * render_object.transform;
+		glm::mat4 mesh_matrix = projection * view * game_object.transform.get_model();
 		// fmt::println("\t\tModel matrix: {}", glm::to_string(mesh_matrix));
 
 		PushConstants push_constants = {
 			.render_matrix = mesh_matrix,
 			.frame_number = _frame_number + i,
 		};
-		if (render_object.update_push_constants != nullptr) {
-			render_object.update_push_constants(push_constants);
-		}
+
 		vkCmdPushConstants(command_buffer, render_object.pMaterial->pipeline_layout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(PushConstants), &push_constants);
 		// fmt::println("\t\tPushed constants");
 
@@ -754,7 +757,7 @@ void Vulkun::draw() {
 	 * D R A W I N G
 	 */
 
-	_draw_objects(_main_command_buffer, _renderables.data(), _renderables.size());
+	_draw_objects(_main_command_buffer, *_game_objects.data(), _game_objects.size());
 
 	ImGui::Render();
 	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), _main_command_buffer);

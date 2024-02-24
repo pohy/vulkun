@@ -1,41 +1,23 @@
 #pragma once
 
-#include "deletion_queue.h"
-#include "vk_mesh.h"
-#include "vk_types.h"
 #include "camera.h"
+#include "deletion_queue.h"
+#include "game_objects.h"
+#include "material.h"
+#include "mesh.h"
 #include "mouse.h"
+#include "vk_types.h"
 
 #include <glm/glm.hpp>
 
 #define APP_NAME "Vulkun - ゔるくん"
 
+class IGameObject;
+
 struct PushConstants {
 	glm::mat4 render_matrix;
 	uint32_t frame_number;
 };
-
-struct Material {
-	VkPipeline pipeline;
-	VkPipelineLayout pipeline_layout;
-};
-
-struct RenderObject {
-	Mesh *pMesh = nullptr;
-	Material *pMaterial = nullptr;
-	glm::mat4 transform = glm::mat4(1.0f);
-
-	std::function<void(PushConstants &)> update_push_constants = nullptr;
-};
-
-namespace MeshName {
-const std::string Triangle = "triangle";
-const std::string Monkey = "monkey";
-} //namespace MeshName
-
-namespace MaterialName {
-const std::string Default = "default";
-}
 
 class Vulkun {
 private:
@@ -79,7 +61,7 @@ private:
 	VkSemaphore _present_semaphore, _render_semaphore;
 	VkFence _render_fence;
 
-	std::vector<RenderObject> _renderables;
+	std::vector<IGameObject *> _game_objects;
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
 
@@ -100,7 +82,8 @@ private:
 	void _load_meshes();
 	void _upload_mesh(Mesh &mesh);
 
-	void _draw_objects(VkCommandBuffer command_buffer, RenderObject *pFirst_render_object, uint32_t count);
+	// TODO: Either remove the pointer passing or figure why the material of triangles points to a nullptr
+	void _draw_objects(VkCommandBuffer command_buffer, IGameObject *pFirst_game_object, uint32_t count);
 
 public:
 	static Vulkun &get_singleton();
@@ -111,6 +94,8 @@ public:
 	void cleanup();
 
 	bool is_initialized() const { return _is_initialized; }
+
+	uint32_t frame_number() const { return _frame_number; }
 
 	Material *create_material(const std::string &name, VkPipeline pipeline, VkPipelineLayout pipeline_layout);
 	Material *get_material(const std::string &name);
