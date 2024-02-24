@@ -18,7 +18,11 @@ env = Environment(
 )
 
 if os == "darwin":
-    env.Append(CXXFLAGS=["-std=c++20"])
+    env.Append(CXXFLAGS=[
+        "-std=c++20",
+        "-g",
+        "-O0",
+    ])
     env.Append(
         CPPPATH=[
             "/opt/homebrew/include",
