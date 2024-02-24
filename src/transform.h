@@ -1,7 +1,10 @@
 #pragma once
 
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/euler_angles.hpp>
 
 class Transform {
 private:
@@ -15,15 +18,12 @@ private:
 
 	void _update_directions() {
 		glm::vec3 rot_rad = glm::radians(_rot);
+		glm::mat4 rot_mat = glm::eulerAngleYXZ(rot_rad.y, rot_rad.x, rot_rad.z);
 
-		_forward = glm::normalize(glm::vec3(
-				cos(rot_rad.y) * cos(rot_rad.x),
-				sin(rot_rad.x),
-				sin(rot_rad.y) * cos(rot_rad.x)));
+		_forward = glm::normalize(-rot_mat[2]);
+		_right = glm::normalize(rot_mat[0]);
+		_up = glm::cross(_right, _forward);
 
-		_right = glm::normalize(glm::cross(_forward, _up));
-
-		_up = glm::normalize(glm::cross(_right, _forward));
 	}
 
 public:

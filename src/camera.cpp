@@ -23,7 +23,9 @@ glm::mat4 Camera::get_view() {
 }
 
 glm::mat4 Camera::get_projection(float aspect) {
-	return glm::perspective(glm::radians(fov), aspect, near, far);
+	glm::mat4 projection = glm::perspective(glm::radians(fov), aspect, near, far);
+	projection[1][1] *= -1;
+	return projection;
 }
 
 void Camera::update(float delta_time) {
@@ -40,8 +42,8 @@ void Camera::update(float delta_time) {
 	ImGui::Text("Up: (%.2f, %.2f, %.2f)", transform.up().x, transform.up().y, transform.up().z);
 	ImGui::End();
 
-	transform.rotate(_rot_amount.x * _mouse_sens * delta_time, glm::vec3(0, 1, 0));
-	transform.rotate(_rot_amount.y * _mouse_sens * delta_time, transform.right());
+	transform.rotate(-_rot_amount.x * _mouse_sens * delta_time, glm::vec3(0, 1, 0));
+	transform.rotate(-_rot_amount.y * _mouse_sens * delta_time, transform.right());
 
 	glm::vec3 rot = transform.rot();
 	transform.set_rot(glm::vec3(glm::clamp(rot.x, _vertical_clamp.x, _vertical_clamp.y), rot.y, rot.z));
@@ -73,11 +75,11 @@ void Camera::_handle_keyboard(const uint8_t *keyboard_state) {
 	if (keyboard_state[SDL_SCANCODE_D] || keyboard_state[SDL_SCANCODE_RIGHT]) {
 		_move_input.x += 1;
 	}
-	if (keyboard_state[SDL_SCANCODE_SPACE]) {
-		_move_input.y -= 1;
-	}
-	if (keyboard_state[SDL_SCANCODE_C]) {
+	if (keyboard_state[SDL_SCANCODE_SPACE] || keyboard_state[SDL_SCANCODE_E]) {
 		_move_input.y += 1;
+	}
+	if (keyboard_state[SDL_SCANCODE_C] || keyboard_state[SDL_SCANCODE_Q]) {
+		_move_input.y -= 1;
 	}
 
 	_is_sprinting = keyboard_state[SDL_SCANCODE_LSHIFT];

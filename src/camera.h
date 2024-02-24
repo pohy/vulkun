@@ -36,7 +36,6 @@ public:
 	glm::vec3 get_pos() { return transform.pos(); }
 
 	Camera() {
-		transform.set_pos(glm::vec3{0, -2, 10});
-		transform.rotate(-90, glm::vec3{0, 1, 0});
+		transform.set_pos(glm::vec3{ 0, -2, 10 });
 	}
 };

@@ -72,12 +72,12 @@ bool Mesh::load_from_obj(std::string file_path) {
 				Vertex vertex = {
 					.pos = {
 							attrib.vertices[3 * idx.vertex_index + 0],
-							-attrib.vertices[3 * idx.vertex_index + 1],
+							attrib.vertices[3 * idx.vertex_index + 1], // * -1.0f,
 							attrib.vertices[3 * idx.vertex_index + 2],
 					},
 					.normal = {
 							attrib.normals[3 * idx.normal_index + 0],
-							-attrib.normals[3 * idx.normal_index + 1],
+							attrib.normals[3 * idx.normal_index + 1], // * -1.0f,
 							attrib.normals[3 * idx.normal_index + 2],
 					},
 				};
