@@ -47,3 +47,10 @@ public:
 
 	virtual std::string name() override { return "Triangle"; }
 };
+
+class Impreza : public IGameObject {
+public:
+	Impreza(Vulkun &vulkun);
+
+	virtual std::string name() override { return "Impreza"; }
+};

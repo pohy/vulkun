@@ -9,7 +9,8 @@
 namespace MeshName {
 const std::string Triangle = "triangle";
 const std::string Monkey = "monkey";
-}
+const std::string Impreza = "impreza";
+} //namespace MeshName
 
 struct VertexInputDescription {
 	std::vector<VkVertexInputBindingDescription> bindings;

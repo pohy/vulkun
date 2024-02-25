@@ -545,6 +545,11 @@ void Vulkun::_load_meshes() {
 	monkey_mesh.load_from_obj("assets/opicka_smooth.obj");
 	_upload_mesh(monkey_mesh);
 	_meshes[MeshName::Monkey] = monkey_mesh;
+
+	Mesh impreza_mesh;
+	impreza_mesh.load_from_obj("assets/impreza/RR22B.obj");
+	_upload_mesh(impreza_mesh);
+	_meshes[MeshName::Impreza] = impreza_mesh;
 }
 
 void Vulkun::_upload_mesh(Mesh &mesh) {
