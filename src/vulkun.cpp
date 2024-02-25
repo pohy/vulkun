@@ -460,8 +460,9 @@ bool Vulkun::_init_scene() {
 	for (int x = -20; x <= 20; ++x) {
 		for (int y = -20; y <= 20; ++y) {
 			IGameObject *pTriangle = new Triangle(*this);
-			pTriangle->transform.translate(glm::vec3(x, abs(y) * y * 0.1f, y));
-			pTriangle->transform.set_scale(glm::vec3(0.2f));
+			pTriangle->transform.translate(glm::vec3{ x, -4 + abs(y) * y * 0.1f, -y });
+			pTriangle->transform.set_scale(glm::vec3{ 0.2f });
+
 			_game_objects.push_back(pTriangle);
 		}
 	}

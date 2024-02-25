@@ -3,80 +3,60 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/euler_angles.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 class Transform {
 private:
 	glm::vec3 _pos{ 0 };
-	glm::vec3 _rot{ 0 };
+	glm::quat _rot = glm::identity<glm::quat>();
 	glm::vec3 _scale{ 1 };
 
-	glm::vec3 _forward{ 0, 0, -1 };
-	glm::vec3 _up{ 0, 1, 0 };
-	glm::vec3 _right{ 1, 0, 0 };
+	glm::vec3 _right{ 0 }, _up{ 0 }, _forward{ 0 };
 
-	void _update_directions() {
-		glm::vec3 rot_rad = glm::radians(_rot);
-		glm::mat4 rot_mat = glm::eulerAngleYXZ(rot_rad.y, rot_rad.x, rot_rad.z);
-
-		_forward = glm::normalize(-rot_mat[2]);
-		_right = glm::normalize(rot_mat[0]);
-		_up = glm::cross(_right, _forward);
-
+	void _update_vectors() {
+		_right = glm::normalize(glm::vec3{ _rot * glm::vec3{ 1, 0, 0 } });
+		_up = glm::normalize(glm::vec3{ _rot * glm::vec3{ 0, 1, 0 } });
+		_forward = glm::normalize(glm::vec3{ _rot * glm::vec3{ 0, 0, -1 } });
 	}
 
 public:
-	const glm::vec3 pos() const { return _pos; }
-	const glm::vec3 rot() const { return _rot; }
-	const glm::vec3 scale() const { return _scale; }
+	Transform() { _update_vectors(); }
 
-	const glm::vec3 forward() const { return _forward; }
-	const glm::vec3 up() const { return _up; }
-	const glm::vec3 right() const { return _right; }
+	glm::vec3 pos() const { return _pos; }
+	glm::vec3 scale() const { return _scale; }
 
-	void set_pos(glm::vec3 pos) { _pos = pos; }
-	void translate(glm::vec3 pos) { _pos += pos; }
+	glm::quat rot() const { return _rot; }
+	glm::vec3 rot_euler() const { return glm::eulerAngles(_rot); }
 
-	/**
-	 * @param rot The new rotation, in degrees.
-	 */
-	void set_rot(glm::vec3 rot) {
-		_rot = rot;
-		_update_directions();
+	glm::vec3 forward() const { return _forward; }
+	glm::vec3 up() const { return _up; }
+	glm::vec3 right() const { return _right; }
+
+	void set_pos(const glm::vec3 pos) { _pos = pos; }
+	void translate(const glm::vec3 translation) { _pos += translation; }
+
+	void set_scale(const float scale) { _scale = glm::vec3{ scale }; }
+	void set_scale(const glm::vec3 scale) { _scale = scale; }
+
+	void set_rot(const glm::quat rot) {
+		_rot = glm::normalize(rot);
+		_update_vectors();
 	}
 
-	/**
-	 * @param angle The angle to rotate by, in degrees.
-	 * @param axis The axis to rotate around.
-	 */
-	void rotate(float angle, glm::vec3 axis) {
-		_rot += angle * glm::normalize(axis);
-		_rot.x = fmod(_rot.x, 360.0f);
-		_rot.y = fmod(_rot.y, 360.0f);
-		_rot.z = fmod(_rot.z, 360.0f);
-
-		_update_directions();
+	void rotate(const float angle_rad, const glm::vec3 axis) {
+		glm::quat new_rot = glm::rotate(glm::identity<glm::quat>(), angle_rad, axis);
+		// The order of multiplication matters!
+		// See Ogre's `Node::rotate` implementation for reference: https://github.com/OGRECave/ogre/blob/master/OgreMain/src/OgreNode.cpp#L413
+		_rot = glm::normalize(new_rot * _rot);
+		_update_vectors();
 	}
 
-	void set_forward(glm::vec3 forward) { _forward = forward; }
-	void set_right(glm::vec3 right) { _right = right; }
-	void set_up(glm::vec3 up) { _up = up; }
-
-	void set_scale(float scale) { _scale = glm::vec3(scale); }
-	void set_scale(glm::vec3 scale) { _scale = scale; }
+	void look_at(const glm::vec3 target) {
+		_rot = glm::quatLookAt(glm::normalize(_pos - target), _up);
+		_update_vectors();
+	}
 
 	glm::mat4 get_model() const {
-		glm::mat4 model = glm::mat4(1.0f);
-
-		model = glm::translate(model, _pos);
-
-		model = glm::rotate(model, glm::radians(_rot.x), glm::vec3(1, 0, 0));
-		model = glm::rotate(model, glm::radians(_rot.y), glm::vec3(0, 1, 0));
-		model = glm::rotate(model, glm::radians(_rot.z), glm::vec3(0, 0, 1));
-
-		model = glm::scale(model, _scale);
-
-		return model;
+		return glm::translate(glm::mat4{ 1 }, _pos) * glm::mat4{ _rot } * glm::scale(glm::mat4{ 1 }, _scale);
 	}
 };

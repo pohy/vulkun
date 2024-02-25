@@ -31,23 +31,21 @@ glm::mat4 Camera::get_projection(float aspect) {
 void Camera::update(float delta_time) {
 	ImGui::Begin("Camera");
 	ImGui::SliderFloat("FOV", &fov, 1.0f, 180.0f);
-	ImGui::SliderFloat("Sensitivity", &_mouse_sens, 1.0f, 10.0f);
+	ImGui::SliderFloat("Sensitivity", &_mouse_sens, 0.1f, 2.0f);
 	ImGui::SliderFloat("Speed", &_speed, 1.0f, 100.0f);
 	ImGui::SliderFloat("Sprint Multiplier", &_sprint_mult, 1.0f, 10.0f);
 	ImGui::Text("Position: (%.2f, %.2f, %.2f)", transform.pos().x, transform.pos().y, transform.pos().z);
-	ImGui::Text("Yaw: %.2f", transform.rot().y);
-	ImGui::Text("Pitch: %.2f", transform.rot().x);
+	ImGui::Text("Yaw: %.2f", transform.rot_euler().y);
+	ImGui::Text("Pitch: %.2f", transform.rot_euler().x);
 	ImGui::Text("Forward: (%.2f, %.2f, %.2f)", transform.forward().x, transform.forward().y, transform.forward().z);
 	ImGui::Text("Right: (%.2f, %.2f, %.2f)", transform.right().x, transform.right().y, transform.right().z);
 	ImGui::Text("Up: (%.2f, %.2f, %.2f)", transform.up().x, transform.up().y, transform.up().z);
 	ImGui::End();
 
-	transform.rotate(-_rot_amount.x * _mouse_sens * delta_time, glm::vec3(0, 1, 0));
 	transform.rotate(-_rot_amount.y * _mouse_sens * delta_time, transform.right());
+	transform.rotate(-_rot_amount.x * _mouse_sens * delta_time, glm::vec3(0, 1, 0));
 
-	glm::vec3 rot = transform.rot();
-	transform.set_rot(glm::vec3(glm::clamp(rot.x, _vertical_clamp.x, _vertical_clamp.y), rot.y, rot.z));
-	transform.set_up(glm::vec3(0, 1, 0));
+	glm::vec3 rot = transform.rot_euler();
 
 	if (glm::length(_move_input) > 0.0f) {
 		_move_input = glm::normalize(_move_input);

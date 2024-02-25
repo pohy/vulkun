@@ -14,7 +14,7 @@ private:
 	float _speed = 10.0f;
 	float _sprint_mult = 2.0f;
 	bool _is_sprinting = false;
-	float _mouse_sens = 5.0f;
+	float _mouse_sens = 0.3f;
 
 	void _handle_keyboard(const uint8_t *keyboard_state);
 
