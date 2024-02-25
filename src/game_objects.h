@@ -1,9 +1,9 @@
 #pragma once
 
-#include "transform.h"
-#include "mesh.h"
-#include "vulkun.h"
 #include "material.h"
+#include "mesh.h"
+#include "transform.h"
+#include "vulkun.h"
 
 #include <vulkan/vulkan.h>
 
@@ -22,7 +22,7 @@ struct IGameObject {
 	IGameObject() = default;
 	virtual ~IGameObject() = default;
 
-	virtual void update(float delta_time) {};
+	virtual void update(float delta_time){};
 
 	virtual std::string name() = 0;
 };
@@ -30,10 +30,11 @@ struct IGameObject {
 class Monkey : public IGameObject {
 private:
 	Vulkun *pVulkun;
+	uint32_t _offset;
 
 public:
 	// TODO: Coupling to Vulkun doesn't seem right
-	Monkey(Vulkun &vulkun);
+	Monkey(Vulkun &vulkun, uint32_t offset);
 
 	virtual void update(float delta_time) override;
 

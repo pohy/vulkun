@@ -453,9 +453,26 @@ bool Vulkun::_init_pipelines() {
 }
 
 bool Vulkun::_init_scene() {
-	IGameObject *pMonkey = new Monkey(*this);
-	pMonkey->transform.translate(glm::vec3{ 0, -2, 0 });
-	_game_objects.push_back(pMonkey);
+	IGameObject *pKing_ape = new Monkey(*this, 0);
+	pKing_ape->transform.set_scale(1.5f);
+	pKing_ape->transform.translate(glm::vec3{ 0, 2, 0 });
+	_game_objects.push_back(pKing_ape);
+
+	float radius = 5.0f;
+	size_t count = 10;
+	float frequency = 2 * M_PI / count;
+
+	for (uint32_t i = 0; i < count; ++i) {
+		IGameObject *pMonkey = new Monkey(*this, 1 + i);
+
+		glm::vec3 pos = glm::vec3{ radius * cos(i * frequency), 0, radius * sin(i * frequency) };
+		pMonkey->transform.translate(pos);
+		pMonkey->transform.look_at(pKing_ape->transform.pos());
+
+		_game_objects.push_back(pMonkey);
+	}
+
+	pKing_ape->transform.look_at(_game_objects[1]->transform.pos());
 
 	for (int x = -20; x <= 20; ++x) {
 		for (int y = -20; y <= 20; ++y) {
