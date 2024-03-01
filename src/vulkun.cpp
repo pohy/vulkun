@@ -377,8 +377,6 @@ bool Vulkun::_init_imgui() {
 bool Vulkun::_init_pipelines() {
 	bool success = false;
 
-	VertexInputDescription mesh_vertex_input = Vertex::create_vertex_description();
-
 	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
 
 	VkPushConstantRange push_constant = {
@@ -406,42 +404,10 @@ bool Vulkun::_init_pipelines() {
 		return false;
 	}
 
-	PipelineBuilder pipeline_builder;
-	pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vert_shader_module));
-	pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, frag_shader_module));
-	pipeline_builder.vertex_input_info = vkinit::vertex_input_state_create_info();
-	pipeline_builder.input_assembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-	pipeline_builder.viewport = {
-		.x = 0.0f,
-		.y = 0.0f,
-		.width = (float)_window_extent.width,
-		.height = (float)_window_extent.height,
-		.minDepth = 0.0f,
-		.maxDepth = 1.0f,
-	};
-	pipeline_builder.scissor = {
-		.offset = { 0, 0 },
-		.extent = _window_extent,
-	};
-	pipeline_builder.rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-	pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
-	pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
+	PipelineBuilder pipeline_builder = PipelineBuilder::create_vert_frag_pipeline(vert_shader_module, frag_shader_module, _window_extent);
 	pipeline_builder.pipeline_layout = pipeline_layout;
 
-	pipeline_builder.vertex_input_info.flags = mesh_vertex_input.flags;
-
-	pipeline_builder.vertex_input_info.vertexBindingDescriptionCount = mesh_vertex_input.bindings.size();
-	pipeline_builder.vertex_input_info.pVertexBindingDescriptions = mesh_vertex_input.bindings.data();
-	fmt::println("Vertex binding description count: {}", pipeline_builder.vertex_input_info.vertexBindingDescriptionCount);
-
-	pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount = mesh_vertex_input.attributes.size();
-	pipeline_builder.vertex_input_info.pVertexAttributeDescriptions = mesh_vertex_input.attributes.data();
-	fmt::println("\tVertex attribute description count: {}", pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount);
-
-	pipeline_builder.depth_stencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
-
-	VkPipeline pipeline;
-	pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
+	VkPipeline pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
 
 	create_material(MaterialName::Default, pipeline, pipeline_layout);
 
