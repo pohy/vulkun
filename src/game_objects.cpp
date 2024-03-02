@@ -22,7 +22,7 @@ void Monkey::update(float delta_time) {
 
 Triangle::Triangle(Vulkun &vulkun) {
 	render_object.pMesh = vulkun.get_mesh(MeshName::Triangle);
-	render_object.pMaterial = vulkun.get_material(MaterialName::Default);
+	render_object.pMaterial = vulkun.get_material(MaterialName::ShiftingColors);
 }
 
 Impreza::Impreza(Vulkun &vulkun) {
