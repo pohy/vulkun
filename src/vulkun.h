@@ -81,6 +81,7 @@ private:
 	bool _load_shader_module(const char *file_path, VkShaderModule *out_shader_module);
 	void _load_meshes();
 	void _upload_mesh(Mesh &mesh);
+	VkPipeline _create_vert_frag_pipeline(const std::string &vert_name, const std::string &frag_name, VkPipelineLayout &pipeline_layout);
 
 	// TODO: Either remove the pointer passing or figure why the material of triangles points to a nullptr
 	void _draw_objects(VkCommandBuffer command_buffer, IGameObject *pFirst_game_object, uint32_t count);
@@ -97,6 +98,7 @@ public:
 
 	uint32_t frame_number() const { return _frame_number; }
 
+	Material *create_material(const std::string &name, const std::string &vert_name, const std::string &frag_name, VkPipelineLayout pipeline_layout);
 	Material *create_material(const std::string &name, VkPipeline pipeline, VkPipelineLayout pipeline_layout);
 	Material *get_material(const std::string &name);
 	Mesh *get_mesh(const std::string &name);

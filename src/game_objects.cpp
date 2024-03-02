@@ -13,8 +13,6 @@ void Monkey::update(float delta_time) {
 		transform.rotate(delta_time * 0.3f, glm::vec3(0, 1, 0));
 		transform.rotate(sign * 0.01f, glm::vec3(0, 1, 0));
 	} else {
-		glm::vec3 eulers = transform.rot_euler();
-		float rot_range = glm::radians(30.0f);
 		float rot_delta = sin(_offset + frame_number * delta_time) * 0.1f;
 		transform.rotate(rot_delta, transform.right());
 	}

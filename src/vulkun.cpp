@@ -375,20 +375,15 @@ bool Vulkun::_init_imgui() {
 }
 
 bool Vulkun::_init_pipelines() {
-	bool success = false;
-
-	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
-
 	VkPushConstantRange push_constant = {
 		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
 		.offset = 0,
 		.size = sizeof(PushConstants),
 	};
 
+	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
 	pipeline_layout_info.pushConstantRangeCount = 1;
 	pipeline_layout_info.pPushConstantRanges = &push_constant;
-
-	// D E F A U L T   M A T E R I A L
 
 	VkPipelineLayout pipeline_layout;
 	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &pipeline_layout));
@@ -397,48 +392,35 @@ bool Vulkun::_init_pipelines() {
 		vkDestroyPipelineLayout(_device, pipeline_layout, nullptr);
 	});
 
+	// D E F A U L T   M A T E R I A L
+	create_material(MaterialName::Default, "mesh_triangle", "colored_triangle", pipeline_layout);
+
+	// S H I F T I N G   C O L O R S   M A T E R I A L
+	create_material(MaterialName::ShiftingColors, "mesh_triangle", "shifting_colors", pipeline_layout);
+
+	return true;
+}
+
+VkPipeline Vulkun::_create_vert_frag_pipeline(const std::string &vert_name, const std::string &frag_name, VkPipelineLayout &pipeline_layout) {
 	VkShaderModule vert_shader_module, frag_shader_module;
-	success = _load_shader_module(fmt::format("shaders/{}.vert.spv", "mesh_triangle").c_str(), &vert_shader_module);
-	success = _load_shader_module(fmt::format("shaders/{}.frag.spv", "colored_triangle").c_str(), &frag_shader_module);
+	bool success = _load_shader_module(fmt::format("shaders/{}.vert.spv", vert_name).c_str(), &vert_shader_module);
+	success = _load_shader_module(fmt::format("shaders/{}.frag.spv", frag_name).c_str(), &frag_shader_module);
 
 	if (!success) {
 		fmt::println(stderr, "Failed to load shader modules for pipeline.");
-		return false;
+		abort();
 	}
 
 	PipelineBuilder pipeline_builder = PipelineBuilder::create_vert_frag_pipeline(vert_shader_module, frag_shader_module, _window_extent);
 	pipeline_builder.pipeline_layout = pipeline_layout;
 
-	VkPipeline default_pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
-
-	create_material(MaterialName::Default, default_pipeline, pipeline_layout);
+	VkPipeline pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
 
 	_deletion_queue.push_function([=, this]() {
-		vkDestroyPipeline(_device, default_pipeline, nullptr);
+		vkDestroyPipeline(_device, pipeline, nullptr);
 	});
 
-
-	// S H I F T I N G   C O L O R S   M A T E R I A L
-
-	success = _load_shader_module(fmt::format("shaders/{}.frag.spv", "shifting_colors").c_str(), &frag_shader_module);
-
-	if (!success) {
-		fmt::println(stderr, "Failed to load shader modules for pipeline.");
-		return false;
-	}
-
-	pipeline_builder = PipelineBuilder::create_vert_frag_pipeline(vert_shader_module, frag_shader_module, _window_extent);
-	pipeline_builder.pipeline_layout = pipeline_layout;
-
-	VkPipeline shifting_colors_pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
-
-	create_material(MaterialName::ShiftingColors, shifting_colors_pipeline, pipeline_layout);
-
-	_deletion_queue.push_function([=, this]() {
-		vkDestroyPipeline(_device, shifting_colors_pipeline, nullptr);
-	});
-
-	return success;
+	return pipeline;
 }
 
 bool Vulkun::_init_scene() {
@@ -467,7 +449,7 @@ bool Vulkun::_init_scene() {
 		for (int y = -20; y <= 20; ++y) {
 			IGameObject *pTriangle = new Triangle(*this);
 			pTriangle->transform.translate(glm::vec3{ x, -4 + abs(y) * y * 0.1f, -y });
-			pTriangle->transform.set_scale(glm::vec3{ 0.2f });
+			pTriangle->transform.set_scale(glm::vec3{ 0.3f });
 
 			_game_objects.push_back(pTriangle);
 		}
@@ -823,6 +805,12 @@ void Vulkun::cleanup() {
 	VK_CHECK(vkWaitForFences(_device, 1, &_render_fence, true, 1000000000));
 
 	_deletion_queue.flush();
+}
+
+Material *Vulkun::create_material(const std::string &name, const std::string &vert_name, const std::string &frag_name, VkPipelineLayout pipeline_layout) {
+	// TODO: How about inlining the _create_vert_frag_pipeline method?
+	VkPipeline pipeline = _create_vert_frag_pipeline(vert_name, frag_name, pipeline_layout);
+	return create_material(name, pipeline, pipeline_layout);
 }
 
 Material *Vulkun::create_material(const std::string &name, VkPipeline pipeline, VkPipelineLayout pipeline_layout) {
