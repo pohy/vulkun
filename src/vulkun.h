@@ -12,7 +12,7 @@
 
 #define APP_NAME "Vulkun - ゔるくん"
 
-class IGameObject;
+struct IGameObject;
 
 struct PushConstants {
 	glm::mat4 render_matrix;

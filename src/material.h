@@ -5,7 +5,8 @@
 
 namespace MaterialName {
 const std::string Default = "default";
-}
+const std::string ShiftingColors = "shifting_colors";
+} //namespace MaterialName
 
 struct Material {
 	VkPipeline pipeline;

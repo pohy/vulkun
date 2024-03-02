@@ -1,4 +1,49 @@
 #include "pipeline_builder.h"
+#include "vk_initializers.h"
+#include "mesh.h"
+
+PipelineBuilder PipelineBuilder::create_vert_frag_pipeline(VkShaderModule vert_shader, VkShaderModule frag_shader, VkExtent2D extent) {
+	PipelineBuilder pipeline_builder;
+
+	pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vert_shader));
+	pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, frag_shader));
+
+	pipeline_builder.vertex_input_info = vkinit::vertex_input_state_create_info();
+	pipeline_builder.input_assembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
+	pipeline_builder.viewport = {
+		.x = 0.0f,
+		.y = 0.0f,
+		.width = (float)extent.width,
+		.height = (float)extent.height,
+		.minDepth = 0.0f,
+		.maxDepth = 1.0f,
+	};
+	pipeline_builder.scissor = {
+		.offset = { 0, 0 },
+		.extent = extent,
+	};
+	pipeline_builder.rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
+	pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
+	pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
+
+	pipeline_builder.vertex_input_description = Vertex::create_vertex_description();
+
+	pipeline_builder.vertex_input_info.flags = pipeline_builder.vertex_input_description.flags;
+
+	pipeline_builder.vertex_input_info.vertexBindingDescriptionCount = pipeline_builder.vertex_input_description.bindings.size();
+	pipeline_builder.vertex_input_info.pVertexBindingDescriptions = pipeline_builder.vertex_input_description.bindings.data();
+
+	fmt::println("\tVertex binding description count: {}", pipeline_builder.vertex_input_info.vertexBindingDescriptionCount);
+
+	pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount = pipeline_builder.vertex_input_description.attributes.size();
+	pipeline_builder.vertex_input_info.pVertexAttributeDescriptions = pipeline_builder.vertex_input_description.attributes.data();
+
+	fmt::println("\tVertex attribute description count: {}", pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount);
+
+	pipeline_builder.depth_stencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
+
+	return pipeline_builder;
+}
 
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass render_pass) {
 	VkPipelineViewportStateCreateInfo viewport_state = {};

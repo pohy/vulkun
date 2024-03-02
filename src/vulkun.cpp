@@ -377,8 +377,6 @@ bool Vulkun::_init_imgui() {
 bool Vulkun::_init_pipelines() {
 	bool success = false;
 
-	VertexInputDescription mesh_vertex_input = Vertex::create_vertex_description();
-
 	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
 
 	VkPushConstantRange push_constant = {
@@ -389,6 +387,8 @@ bool Vulkun::_init_pipelines() {
 
 	pipeline_layout_info.pushConstantRangeCount = 1;
 	pipeline_layout_info.pPushConstantRanges = &push_constant;
+
+	// D E F A U L T   M A T E R I A L
 
 	VkPipelineLayout pipeline_layout;
 	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &pipeline_layout));
@@ -406,47 +406,36 @@ bool Vulkun::_init_pipelines() {
 		return false;
 	}
 
-	PipelineBuilder pipeline_builder;
-	pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_VERTEX_BIT, vert_shader_module));
-	pipeline_builder.shader_stages.push_back(vkinit::pipeline_shader_stage_create_info(VK_SHADER_STAGE_FRAGMENT_BIT, frag_shader_module));
-	pipeline_builder.vertex_input_info = vkinit::vertex_input_state_create_info();
-	pipeline_builder.input_assembly = vkinit::input_assembly_create_info(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-	pipeline_builder.viewport = {
-		.x = 0.0f,
-		.y = 0.0f,
-		.width = (float)_window_extent.width,
-		.height = (float)_window_extent.height,
-		.minDepth = 0.0f,
-		.maxDepth = 1.0f,
-	};
-	pipeline_builder.scissor = {
-		.offset = { 0, 0 },
-		.extent = _window_extent,
-	};
-	pipeline_builder.rasterizer = vkinit::rasterization_state_create_info(VK_POLYGON_MODE_FILL);
-	pipeline_builder.multisampling = vkinit::multisampling_state_create_info();
-	pipeline_builder.color_blend_attachment = vkinit::color_blend_attachment_state();
+	PipelineBuilder pipeline_builder = PipelineBuilder::create_vert_frag_pipeline(vert_shader_module, frag_shader_module, _window_extent);
 	pipeline_builder.pipeline_layout = pipeline_layout;
 
-	pipeline_builder.vertex_input_info.flags = mesh_vertex_input.flags;
+	VkPipeline default_pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
 
-	pipeline_builder.vertex_input_info.vertexBindingDescriptionCount = mesh_vertex_input.bindings.size();
-	pipeline_builder.vertex_input_info.pVertexBindingDescriptions = mesh_vertex_input.bindings.data();
-	fmt::println("Vertex binding description count: {}", pipeline_builder.vertex_input_info.vertexBindingDescriptionCount);
-
-	pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount = mesh_vertex_input.attributes.size();
-	pipeline_builder.vertex_input_info.pVertexAttributeDescriptions = mesh_vertex_input.attributes.data();
-	fmt::println("\tVertex attribute description count: {}", pipeline_builder.vertex_input_info.vertexAttributeDescriptionCount);
-
-	pipeline_builder.depth_stencil = vkinit::depth_stencil_create_info(true, true, VK_COMPARE_OP_LESS_OR_EQUAL);
-
-	VkPipeline pipeline;
-	pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
-
-	create_material(MaterialName::Default, pipeline, pipeline_layout);
+	create_material(MaterialName::Default, default_pipeline, pipeline_layout);
 
 	_deletion_queue.push_function([=, this]() {
-		vkDestroyPipeline(_device, pipeline, nullptr);
+		vkDestroyPipeline(_device, default_pipeline, nullptr);
+	});
+
+
+	// S H I F T I N G   C O L O R S   M A T E R I A L
+
+	success = _load_shader_module(fmt::format("shaders/{}.frag.spv", "shifting_colors").c_str(), &frag_shader_module);
+
+	if (!success) {
+		fmt::println(stderr, "Failed to load shader modules for pipeline.");
+		return false;
+	}
+
+	pipeline_builder = PipelineBuilder::create_vert_frag_pipeline(vert_shader_module, frag_shader_module, _window_extent);
+	pipeline_builder.pipeline_layout = pipeline_layout;
+
+	VkPipeline shifting_colors_pipeline = pipeline_builder.build_pipeline(_device, _render_pass);
+
+	create_material(MaterialName::ShiftingColors, shifting_colors_pipeline, pipeline_layout);
+
+	_deletion_queue.push_function([=, this]() {
+		vkDestroyPipeline(_device, shifting_colors_pipeline, nullptr);
 	});
 
 	return success;
@@ -756,6 +745,9 @@ void Vulkun::draw() {
 	VkClearValue clear_color;
 	float flash = abs(sin(_frame_number / 360.0f));
 	clear_color.color = { { 1.0f - flash, flash, flash * 0.5f, 1.0f } };
+	for (size_t i = 0; i < 3; i++) {
+		clear_color.color.float32[i] *= 0.2f;
+	}
 
 	VkClearValue clear_depth;
 	clear_depth.depthStencil.depth = 1.0f;
@@ -840,13 +832,15 @@ Material *Vulkun::create_material(const std::string &name, VkPipeline pipeline, 
 	};
 	_materials[name] = material;
 
+	fmt::println("Created material with name: '{}'", name);
+
 	return &_materials[name];
 }
 
 Material *Vulkun::get_material(const std::string &name) {
 	auto it = _materials.find(name);
 	if (it == _materials.end()) {
-		fmt::println(stderr, "Material with name {} not found", name);
+		fmt::println(stderr, "Material with name '{}' not found", name);
 		abort();
 	}
 	return &it->second;
@@ -855,7 +849,7 @@ Material *Vulkun::get_material(const std::string &name) {
 Mesh *Vulkun::get_mesh(const std::string &name) {
 	auto it = _meshes.find(name);
 	if (it == _meshes.end()) {
-		fmt::println(stderr, "Mesh with name {} not found", name);
+		fmt::println(stderr, "Mesh with name '{}' not found", name);
 		abort();
 	}
 	return &it->second;

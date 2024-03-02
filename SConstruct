@@ -22,6 +22,7 @@ if os == "darwin":
         "-std=c++20",
         "-g",
         "-O0",
+        "-Wall",
     ])
     env.Append(
         CPPPATH=[
