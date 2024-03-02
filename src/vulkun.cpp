@@ -12,6 +12,7 @@
 #include <imgui_impl_vulkan.h>
 
 #include <VkBootstrap.h>
+#include <random>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -462,6 +463,11 @@ bool Vulkun::_init_scene() {
 	pImpreza->transform.translate(glm::vec3{ 0, -2, 0 });
 	_game_objects.push_back(pImpreza);
 
+	// std::random_device random_device;
+	// std::mt19937 random_engine(random_device());
+	// random_engine.seed(0);
+	// std::shuffle(_game_objects.begin(), _game_objects.end(), random_engine);
+
 	return true;
 }
 
@@ -628,7 +634,9 @@ void Vulkun::run() {
 
 		ImGui::Text("Frame time: %.0fms", _delta_time * 1000.0f);
 
-		ImGui::Text("Draw calls: %d", _draw_calls);
+		ImGui::Text("Draw calls: %d", _metrics.draw_calls);
+		ImGui::Text("Pipeline bind calls: %d", _metrics.pipeline_bind_calls);
+		ImGui::Text("Vertex buffer bind calls: %d", _metrics.vertex_buffer_bind_calls);
 
 		glm::vec3 camera_pos = _camera.get_pos();
 		ImGui::Text("Camera pos: %.2f, %.2f, %.2f", camera_pos.x, camera_pos.y, camera_pos.z);
@@ -661,7 +669,7 @@ void Vulkun::run() {
 // TODO: Figure out why the "pointer" approach ends up pointing to a nullptr when accessing the render object's material
 void Vulkun::_draw_objects(VkCommandBuffer command_buffer, IGameObject *_, uint32_t __) {
 	// fmt::println("Drawing {} objects", count);
-	_draw_calls = 0;
+	_metrics.reset();
 
 	float aspect = (float)_window_extent.width / (float)_window_extent.height;
 	glm::mat4 projection = _camera.get_projection(aspect);
@@ -670,9 +678,17 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer, IGameObject *_, uint3
 	Material *pLast_material = nullptr;
 	Mesh *pLast_mesh = nullptr;
 
-	for (uint32_t i = 0; i < _game_objects.size(); ++i) {
+	// TODO: Sort game objects only when they have changed. Sorting on every frame is pretty westeful :)
+	std::vector<IGameObject *> sorted_game_objects{ _game_objects.begin(), _game_objects.end() };
+	std::sort(sorted_game_objects.begin(), sorted_game_objects.end(), [](IGameObject *a, IGameObject *b) {
+		uint64_t a_ptr = (uint64_t)a->render_object.pMesh + (uint64_t)a->render_object.pMaterial;
+		uint64_t b_ptr = (uint64_t)b->render_object.pMesh + (uint64_t)b->render_object.pMaterial;
+		return a_ptr > b_ptr;
+	});
+
+	for (uint32_t i = 0; i < sorted_game_objects.size(); ++i) {
 		// fmt::println("\tDrawing object {}", i);
-		IGameObject &game_object = *_game_objects[i];
+		IGameObject &game_object = *sorted_game_objects[i];
 		RenderObject &render_object = game_object.render_object;
 
 		if (pLast_material != render_object.pMaterial) {
@@ -681,6 +697,7 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer, IGameObject *_, uint3
 
 			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_object.pMaterial->pipeline);
 			pLast_material = render_object.pMaterial;
+			_metrics.pipeline_bind_calls++;
 			// fmt::println("\t\tBound pipeline");
 		}
 
@@ -702,12 +719,13 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer, IGameObject *_, uint3
 			VkDeviceSize offset = 0;
 			vkCmdBindVertexBuffers(command_buffer, 0, 1, &render_object.pMesh->vertex_buffer.buffer, &offset);
 			pLast_mesh = render_object.pMesh;
+			_metrics.vertex_buffer_bind_calls++;
 			// fmt::println("\t\tBound vertex buffer");
 		}
 
 		// TODO: Count draw calls
 		vkCmdDraw(command_buffer, render_object.pMesh->vertices.size(), 1, 0, 0);
-		_draw_calls++;
+		_metrics.draw_calls++;
 		// fmt::println("\t\tDrawn object");
 	}
 

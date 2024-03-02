@@ -19,6 +19,18 @@ struct PushConstants {
 	uint32_t frame_number;
 };
 
+struct Metrics {
+	uint32_t draw_calls = 0;
+	uint32_t pipeline_bind_calls = 0;
+	uint32_t vertex_buffer_bind_calls = 0;
+
+	void reset() {
+		draw_calls = 0;
+		pipeline_bind_calls = 0;
+		vertex_buffer_bind_calls = 0;
+	}
+};
+
 class Vulkun {
 private:
 	uint32_t _frame_number = 0;
@@ -26,7 +38,7 @@ private:
 	int _selected_pipeline_idx = 0;
 	bool _is_initialized = false;
 	bool _is_rendering_paused = false;
-	uint32_t _draw_calls = 0;
+	Metrics _metrics;
 
 	VkExtent2D _window_extent = { 1600, 900 };
 	struct SDL_Window *_window = nullptr;
