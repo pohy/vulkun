@@ -31,6 +31,16 @@ struct Metrics {
 	}
 };
 
+struct FrameData {
+	VkSemaphore present_semaphore;
+	VkSemaphore render_semaphore;
+	VkFence render_fence;
+	VkCommandPool command_pool;
+	VkCommandBuffer command_buffer;
+};
+
+constexpr uint32_t FRAME_OVERLAP = 2;
+
 class Vulkun {
 private:
 	uint32_t _frame_number = 0;
@@ -39,6 +49,7 @@ private:
 	bool _is_initialized = false;
 	bool _is_rendering_paused = false;
 	Metrics _metrics;
+	FrameData _frame_data[FRAME_OVERLAP];
 
 	VkExtent2D _window_extent = { 1600, 900 };
 	struct SDL_Window *_window = nullptr;
@@ -64,14 +75,9 @@ private:
 
 	VkQueue _graphics_queue;
 	uint32_t _graphics_queue_family_idx;
-	VkCommandPool _command_pool;
-	VkCommandBuffer _main_command_buffer;
 
 	VkRenderPass _render_pass;
 	std::vector<VkFramebuffer> _framebuffers;
-
-	VkSemaphore _present_semaphore, _render_semaphore;
-	VkFence _render_fence;
 
 	std::vector<IGameObject *> _game_objects;
 	std::unordered_map<std::string, Material> _materials;
@@ -96,7 +102,9 @@ private:
 	VkPipeline _create_vert_frag_pipeline(const std::string &vert_name, const std::string &frag_name, VkPipelineLayout &pipeline_layout);
 
 	// TODO: Either remove the pointer passing or figure why the material of triangles points to a nullptr
-	void _draw_objects(VkCommandBuffer command_buffer, IGameObject *pFirst_game_object, uint32_t count);
+	void _draw_objects(VkCommandBuffer command_buffer);
+
+	FrameData& _get_current_frame_data();
 
 public:
 	static Vulkun &get_singleton();

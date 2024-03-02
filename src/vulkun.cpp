@@ -12,7 +12,6 @@
 #include <imgui_impl_vulkan.h>
 
 #include <VkBootstrap.h>
-#include <random>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -166,24 +165,26 @@ bool Vulkun::_init_swapchain() {
 }
 
 bool Vulkun::_init_commands() {
-	VkCommandPoolCreateInfo pool_info = {};
-	pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	pool_info.pNext = nullptr;
-	pool_info.queueFamilyIndex = _graphics_queue_family_idx;
-	pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-	VK_CHECK(vkCreateCommandPool(_device, &pool_info, nullptr, &_command_pool));
+	for (size_t i = 0; i < FRAME_OVERLAP; ++i) {
+		VkCommandPoolCreateInfo pool_info = {};
+		pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		pool_info.pNext = nullptr;
+		pool_info.queueFamilyIndex = _graphics_queue_family_idx;
+		pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		VK_CHECK(vkCreateCommandPool(_device, &pool_info, nullptr, &_frame_data[i].command_pool));
 
-	VkCommandBufferAllocateInfo cmd_alloc_info = {};
-	cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	cmd_alloc_info.pNext = nullptr;
-	cmd_alloc_info.commandPool = _command_pool;
-	cmd_alloc_info.commandBufferCount = 1;
-	cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_alloc_info, &_main_command_buffer));
+		VkCommandBufferAllocateInfo cmd_alloc_info = {};
+		cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		cmd_alloc_info.pNext = nullptr;
+		cmd_alloc_info.commandPool = _frame_data[i].command_pool;
+		cmd_alloc_info.commandBufferCount = 1;
+		cmd_alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		VK_CHECK(vkAllocateCommandBuffers(_device, &cmd_alloc_info, &_frame_data[i].command_buffer));
 
-	_deletion_queue.push_function([=, this]() {
-		vkDestroyCommandPool(_device, _command_pool, nullptr);
-	});
+		_deletion_queue.push_function([=, this]() {
+			vkDestroyCommandPool(_device, _frame_data[i].command_pool, nullptr);
+		});
+	}
 
 	return true;
 }
@@ -294,28 +295,30 @@ bool Vulkun::_init_framebuffers() {
 }
 
 bool Vulkun::_init_sync_structures() {
-	VkFenceCreateInfo fence_info = {};
-	fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-	fence_info.pNext = nullptr;
-	fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+	for (size_t i = 0; i < FRAME_OVERLAP; ++i) {
+		VkFenceCreateInfo fence_info = {};
+		fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fence_info.pNext = nullptr;
+		fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-	VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_render_fence));
+		VK_CHECK(vkCreateFence(_device, &fence_info, nullptr, &_frame_data[i].render_fence));
 
-	_deletion_queue.push_function([=, this]() {
-		vkDestroyFence(_device, _render_fence, nullptr);
-	});
+		_deletion_queue.push_function([=, this]() {
+			vkDestroyFence(_device, _frame_data[i].render_fence, nullptr);
+		});
 
-	VkSemaphoreCreateInfo semaphore_info = {};
-	semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-	semaphore_info.pNext = nullptr;
+		VkSemaphoreCreateInfo semaphore_info = {};
+		semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+		semaphore_info.pNext = nullptr;
 
-	VK_CHECK(vkCreateSemaphore(_device, &semaphore_info, nullptr, &_present_semaphore));
-	VK_CHECK(vkCreateSemaphore(_device, &semaphore_info, nullptr, &_render_semaphore));
+		VK_CHECK(vkCreateSemaphore(_device, &semaphore_info, nullptr, &_frame_data[i].present_semaphore));
+		VK_CHECK(vkCreateSemaphore(_device, &semaphore_info, nullptr, &_frame_data[i].render_semaphore));
 
-	_deletion_queue.push_function([=, this]() {
-		vkDestroySemaphore(_device, _present_semaphore, nullptr);
-		vkDestroySemaphore(_device, _render_semaphore, nullptr);
-	});
+		_deletion_queue.push_function([=, this]() {
+			vkDestroySemaphore(_device, _frame_data[i].present_semaphore, nullptr);
+			vkDestroySemaphore(_device, _frame_data[i].render_semaphore, nullptr);
+		});
+	}
 
 	return true;
 }
@@ -666,8 +669,7 @@ void Vulkun::run() {
 	}
 }
 
-// TODO: Figure out why the "pointer" approach ends up pointing to a nullptr when accessing the render object's material
-void Vulkun::_draw_objects(VkCommandBuffer command_buffer, IGameObject *_, uint32_t __) {
+void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
 	// fmt::println("Drawing {} objects", count);
 	_metrics.reset();
 
@@ -732,14 +734,20 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer, IGameObject *_, uint3
 	// fmt::println("\tFinished drawning {} objects", count);
 }
 
-void Vulkun::draw() {
-	VK_CHECK(vkWaitForFences(_device, 1, &_render_fence, true, 1000000000));
-	VK_CHECK(vkResetFences(_device, 1, &_render_fence));
+FrameData &Vulkun::_get_current_frame_data() {
+	return _frame_data[_frame_number % FRAME_OVERLAP];
+}
 
-	VK_CHECK(vkResetCommandBuffer(_main_command_buffer, 0));
+void Vulkun::draw() {
+	FrameData &frame_data = _get_current_frame_data();
+
+	VK_CHECK(vkWaitForFences(_device, 1, &frame_data.render_fence, true, 1000000000));
+	VK_CHECK(vkResetFences(_device, 1, &frame_data.render_fence));
+
+	VK_CHECK(vkResetCommandBuffer(frame_data.command_buffer, 0));
 
 	uint32_t swapchain_image_index;
-	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, _present_semaphore, nullptr, &swapchain_image_index));
+	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, frame_data.present_semaphore, nullptr, &swapchain_image_index));
 
 	VkCommandBufferBeginInfo cmd_begin_info = {};
 	cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -747,7 +755,7 @@ void Vulkun::draw() {
 	cmd_begin_info.pInheritanceInfo = nullptr;
 	cmd_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-	VK_CHECK(vkBeginCommandBuffer(_main_command_buffer, &cmd_begin_info));
+	VK_CHECK(vkBeginCommandBuffer(frame_data.command_buffer, &cmd_begin_info));
 
 	VkClearValue clear_color;
 	float flash = abs(sin(_frame_number / 360.0f));
@@ -773,23 +781,23 @@ void Vulkun::draw() {
 	render_pass_begin_info.clearValueCount = clear_value_count;
 	render_pass_begin_info.pClearValues = &clear_values[0];
 
-	vkCmdBeginRenderPass(_main_command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
+	vkCmdBeginRenderPass(frame_data.command_buffer, &render_pass_begin_info, VK_SUBPASS_CONTENTS_INLINE);
 
 	/**
 	 * D R A W I N G
 	 */
 
-	_draw_objects(_main_command_buffer, *_game_objects.data(), _game_objects.size());
+	_draw_objects(frame_data.command_buffer);
 
 	ImGui::Render();
-	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), _main_command_buffer);
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), frame_data.command_buffer);
 
 	/**
 	 * E N D   D R A W I N G
 	 */
 
-	vkCmdEndRenderPass(_main_command_buffer);
-	VK_CHECK(vkEndCommandBuffer(_main_command_buffer));
+	vkCmdEndRenderPass(frame_data.command_buffer);
+	VK_CHECK(vkEndCommandBuffer(frame_data.command_buffer));
 
 	VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
@@ -798,19 +806,19 @@ void Vulkun::draw() {
 	submit_info.pNext = nullptr;
 	submit_info.pWaitDstStageMask = &wait_stage;
 	submit_info.waitSemaphoreCount = 1;
-	submit_info.pWaitSemaphores = &_present_semaphore;
+	submit_info.pWaitSemaphores = &frame_data.present_semaphore;
 	submit_info.signalSemaphoreCount = 1;
-	submit_info.pSignalSemaphores = &_render_semaphore;
+	submit_info.pSignalSemaphores = &frame_data.render_semaphore;
 	submit_info.commandBufferCount = 1;
-	submit_info.pCommandBuffers = &_main_command_buffer;
+	submit_info.pCommandBuffers = &frame_data.command_buffer;
 
-	VK_CHECK(vkQueueSubmit(_graphics_queue, 1, &submit_info, _render_fence));
+	VK_CHECK(vkQueueSubmit(_graphics_queue, 1, &submit_info, frame_data.render_fence));
 
 	VkPresentInfoKHR present_info = {};
 	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	present_info.pNext = nullptr;
 	present_info.waitSemaphoreCount = 1;
-	present_info.pWaitSemaphores = &_render_semaphore;
+	present_info.pWaitSemaphores = &frame_data.render_semaphore;
 	present_info.swapchainCount = 1;
 	present_info.pSwapchains = &_swapchain;
 	present_info.pImageIndices = &swapchain_image_index;
@@ -827,7 +835,11 @@ void Vulkun::cleanup() {
 		return;
 	}
 
-	VK_CHECK(vkWaitForFences(_device, 1, &_render_fence, true, 1000000000));
+	VkFence fences[FRAME_OVERLAP];
+	for (size_t i = 0; i < FRAME_OVERLAP; ++i) {
+		fences[i] = _frame_data[i].render_fence;
+	}
+	VK_CHECK(vkWaitForFences(_device, FRAME_OVERLAP, fences, true, 1000000000));
 
 	_deletion_queue.flush();
 }
