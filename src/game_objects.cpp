@@ -25,5 +25,9 @@ Triangle::Triangle(Vulkun &vulkun) {
 
 Impreza::Impreza(Vulkun &vulkun) {
 	render_object.pMesh = vulkun.get_mesh(MeshName::Impreza);
-	render_object.pMaterial = vulkun.get_material(MaterialName::Default);
+	render_object.pMaterial = vulkun.get_material(MaterialName::Impreza);
+}
+
+void Impreza::update(float delta_time) {
+	transform.rotate(-delta_time * 0.3f, glm::vec3(0, 1, 0));
 }

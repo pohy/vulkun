@@ -6,6 +6,7 @@
 namespace MaterialName {
 const std::string Default = "default";
 const std::string ShiftingColors = "shifting_colors";
+const std::string Impreza = "impreza";
 } //namespace MaterialName
 
 struct Material {

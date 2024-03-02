@@ -398,6 +398,9 @@ bool Vulkun::_init_pipelines() {
 	// S H I F T I N G   C O L O R S   M A T E R I A L
 	create_material(MaterialName::ShiftingColors, "mesh_triangle", "shifting_colors", pipeline_layout);
 
+	// I M P R E Z A    M A T E R I A L
+	create_material(MaterialName::Impreza, "mesh_triangle", "impreza", pipeline_layout);
+
 	return true;
 }
 
@@ -454,6 +457,10 @@ bool Vulkun::_init_scene() {
 			_game_objects.push_back(pTriangle);
 		}
 	}
+
+	IGameObject *pImpreza = new Impreza(*this);
+	pImpreza->transform.translate(glm::vec3{ 0, -2, 0 });
+	_game_objects.push_back(pImpreza);
 
 	return true;
 }

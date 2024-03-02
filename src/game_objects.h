@@ -53,4 +53,6 @@ public:
 	Impreza(Vulkun &vulkun);
 
 	virtual std::string name() override { return "Impreza"; }
+
+	virtual void update(float delta_time) override;
 };
