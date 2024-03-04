@@ -1,7 +1,7 @@
 #include "vk_initializers.h"
 
 VkCommandPoolCreateInfo vkinit::command_pool_create_info(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags) {
-	VkCommandPoolCreateInfo info = {};
+	VkCommandPoolCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 	info.pNext = nullptr;
 	info.queueFamilyIndex = queueFamilyIndex;
@@ -11,7 +11,7 @@ VkCommandPoolCreateInfo vkinit::command_pool_create_info(uint32_t queueFamilyInd
 }
 
 VkCommandBufferAllocateInfo vkinit::command_buffer_allocate_info(VkCommandPool pool, uint32_t count, VkCommandBufferLevel level) {
-	VkCommandBufferAllocateInfo info = {};
+	VkCommandBufferAllocateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	info.pNext = nullptr;
 	info.commandPool = pool;
@@ -22,7 +22,7 @@ VkCommandBufferAllocateInfo vkinit::command_buffer_allocate_info(VkCommandPool p
 }
 
 VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShaderStageFlagBits stage_flags, VkShaderModule shader_module) {
-	VkPipelineShaderStageCreateInfo info = {};
+	VkPipelineShaderStageCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	info.pNext = nullptr;
 	info.stage = stage_flags;
@@ -34,7 +34,7 @@ VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShad
 }
 
 VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info() {
-	VkPipelineVertexInputStateCreateInfo info = {};
+	VkPipelineVertexInputStateCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 	info.pNext = nullptr;
 	info.vertexBindingDescriptionCount = 0;
@@ -44,7 +44,7 @@ VkPipelineVertexInputStateCreateInfo vkinit::vertex_input_state_create_info() {
 }
 
 VkPipelineInputAssemblyStateCreateInfo vkinit::input_assembly_create_info(VkPrimitiveTopology topology) {
-	VkPipelineInputAssemblyStateCreateInfo info = {};
+	VkPipelineInputAssemblyStateCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 	info.pNext = nullptr;
 	info.topology = topology;
@@ -54,7 +54,7 @@ VkPipelineInputAssemblyStateCreateInfo vkinit::input_assembly_create_info(VkPrim
 }
 
 VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(VkPolygonMode polygon_mode) {
-	VkPipelineRasterizationStateCreateInfo info = {};
+	VkPipelineRasterizationStateCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 	info.pNext = nullptr;
 	info.depthClampEnable = VK_FALSE;
@@ -73,7 +73,7 @@ VkPipelineRasterizationStateCreateInfo vkinit::rasterization_state_create_info(V
 }
 
 VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info() {
-	VkPipelineMultisampleStateCreateInfo info = {};
+	VkPipelineMultisampleStateCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 	info.pNext = nullptr;
 	info.sampleShadingEnable = VK_FALSE;
@@ -87,7 +87,7 @@ VkPipelineMultisampleStateCreateInfo vkinit::multisampling_state_create_info() {
 }
 
 VkPipelineColorBlendAttachmentState vkinit::color_blend_attachment_state() {
-	VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+	VkPipelineColorBlendAttachmentState colorBlendAttachment{};
 	colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 	colorBlendAttachment.blendEnable = VK_FALSE;
 
@@ -95,7 +95,7 @@ VkPipelineColorBlendAttachmentState vkinit::color_blend_attachment_state() {
 }
 
 VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
-	VkPipelineLayoutCreateInfo info = {};
+	VkPipelineLayoutCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 	info.pNext = nullptr;
 	info.flags = 0;
@@ -108,7 +108,7 @@ VkPipelineLayoutCreateInfo vkinit::pipeline_layout_create_info() {
 }
 
 VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent) {
-	VkImageCreateInfo info = {};
+	VkImageCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	info.pNext = nullptr;
 	info.imageType = VK_IMAGE_TYPE_2D;
@@ -124,7 +124,7 @@ VkImageCreateInfo vkinit::image_create_info(VkFormat format, VkImageUsageFlags u
 }
 
 VkImageViewCreateInfo vkinit::image_view_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspect_flags) {
-	VkImageViewCreateInfo info = {};
+	VkImageViewCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	info.pNext = nullptr;
 	info.viewType = VK_IMAGE_VIEW_TYPE_2D;
@@ -140,7 +140,7 @@ VkImageViewCreateInfo vkinit::image_view_create_info(VkFormat format, VkImage im
 }
 
 VkPipelineDepthStencilStateCreateInfo vkinit::depth_stencil_create_info(bool shuold_depth_test, bool should_depth_write, VkCompareOp compare_op) {
-	VkPipelineDepthStencilStateCreateInfo info = {};
+	VkPipelineDepthStencilStateCreateInfo info{};
 	info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 	info.pNext = nullptr;
 	info.depthTestEnable = shuold_depth_test ? VK_TRUE : VK_FALSE;

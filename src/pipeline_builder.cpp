@@ -1,6 +1,6 @@
 #include "pipeline_builder.h"
-#include "vk_initializers.h"
 #include "mesh.h"
+#include "vk_initializers.h"
 
 PipelineBuilder PipelineBuilder::create_vert_frag_pipeline(VkShaderModule vert_shader, VkShaderModule frag_shader, VkExtent2D extent) {
 	PipelineBuilder pipeline_builder;
@@ -46,7 +46,7 @@ PipelineBuilder PipelineBuilder::create_vert_frag_pipeline(VkShaderModule vert_s
 }
 
 VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass render_pass) {
-	VkPipelineViewportStateCreateInfo viewport_state = {};
+	VkPipelineViewportStateCreateInfo viewport_state{};
 	viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 	viewport_state.pNext = nullptr;
 	viewport_state.viewportCount = 1;
@@ -54,7 +54,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass render_
 	viewport_state.scissorCount = 1;
 	viewport_state.pScissors = &scissor;
 
-	VkPipelineColorBlendStateCreateInfo color_blending = {};
+	VkPipelineColorBlendStateCreateInfo color_blending{};
 	color_blending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 	color_blending.pNext = nullptr;
 	color_blending.logicOpEnable = VK_FALSE;
@@ -62,7 +62,7 @@ VkPipeline PipelineBuilder::build_pipeline(VkDevice device, VkRenderPass render_
 	color_blending.attachmentCount = 1;
 	color_blending.pAttachments = &color_blend_attachment;
 
-	VkGraphicsPipelineCreateInfo pipeline_info = {};
+	VkGraphicsPipelineCreateInfo pipeline_info{};
 	pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 	pipeline_info.pNext = nullptr;
 	pipeline_info.stageCount = shader_stages.size();

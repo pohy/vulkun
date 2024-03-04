@@ -112,7 +112,7 @@ bool Vulkun::_init_vulkan() {
 	_graphics_queue = vkb_device.get_queue(vkb::QueueType::graphics).value();
 	_graphics_queue_family_idx = vkb_device.get_queue_index(vkb::QueueType::graphics).value();
 
-	VmaAllocatorCreateInfo allocator_info = {};
+	VmaAllocatorCreateInfo allocator_info{};
 	allocator_info.physicalDevice = _physical_device;
 	allocator_info.device = _device;
 	allocator_info.instance = _instance;
@@ -146,7 +146,7 @@ bool Vulkun::_init_swapchain() {
 	VkExtent3D depth_image_extent = { _window_extent.width, _window_extent.height, 1 };
 	VkImageCreateInfo depth_image_info = vkinit::image_create_info(_depth_format, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, depth_image_extent);
 
-	VmaAllocationCreateInfo depth_image_alloc_info = {};
+	VmaAllocationCreateInfo depth_image_alloc_info{};
 	depth_image_alloc_info.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 	depth_image_alloc_info.requiredFlags = VkMemoryPropertyFlags(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
@@ -166,14 +166,14 @@ bool Vulkun::_init_swapchain() {
 
 bool Vulkun::_init_commands() {
 	for (size_t i = 0; i < FRAME_OVERLAP; ++i) {
-		VkCommandPoolCreateInfo pool_info = {};
+		VkCommandPoolCreateInfo pool_info{};
 		pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		pool_info.pNext = nullptr;
 		pool_info.queueFamilyIndex = _graphics_queue_family_idx;
 		pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 		VK_CHECK(vkCreateCommandPool(_device, &pool_info, nullptr, &_frame_data[i].command_pool));
 
-		VkCommandBufferAllocateInfo cmd_alloc_info = {};
+		VkCommandBufferAllocateInfo cmd_alloc_info{};
 		cmd_alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		cmd_alloc_info.pNext = nullptr;
 		cmd_alloc_info.commandPool = _frame_data[i].command_pool;
@@ -190,7 +190,7 @@ bool Vulkun::_init_commands() {
 }
 
 bool Vulkun::_init_default_renderpass() {
-	VkAttachmentDescription color_attachment = {};
+	VkAttachmentDescription color_attachment{};
 	color_attachment.format = _swapchain_image_format;
 	color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -200,11 +200,11 @@ bool Vulkun::_init_default_renderpass() {
 	color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
-	VkAttachmentReference color_attachment_ref = {};
+	VkAttachmentReference color_attachment_ref{};
 	color_attachment_ref.attachment = 0;
 	color_attachment_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-	VkAttachmentDescription depth_attachment = {};
+	VkAttachmentDescription depth_attachment{};
 	depth_attachment.format = _depth_format;
 	depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 	depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -214,17 +214,17 @@ bool Vulkun::_init_default_renderpass() {
 	depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 	depth_attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-	VkAttachmentReference depth_attachment_ref = {};
+	VkAttachmentReference depth_attachment_ref{};
 	depth_attachment_ref.attachment = 1;
 	depth_attachment_ref.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-	VkSubpassDescription subpass = {};
+	VkSubpassDescription subpass{};
 	subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 	subpass.colorAttachmentCount = 1;
 	subpass.pColorAttachments = &color_attachment_ref;
 	subpass.pDepthStencilAttachment = &depth_attachment_ref;
 
-	VkSubpassDependency dependency = {};
+	VkSubpassDependency dependency{};
 	dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	dependency.dstSubpass = 0;
 	dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -232,7 +232,7 @@ bool Vulkun::_init_default_renderpass() {
 	dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 	dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
-	VkSubpassDependency depth_dependency = {};
+	VkSubpassDependency depth_dependency{};
 	depth_dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
 	depth_dependency.dstSubpass = 0;
 	depth_dependency.srcStageMask = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
@@ -246,7 +246,7 @@ bool Vulkun::_init_default_renderpass() {
 	const uint32_t dependency_count = 2;
 	VkSubpassDependency dependencies[dependency_count] = { dependency, depth_dependency };
 
-	VkRenderPassCreateInfo render_pass_info = {};
+	VkRenderPassCreateInfo render_pass_info{};
 	render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
 	render_pass_info.pNext = nullptr;
 	render_pass_info.attachmentCount = attachment_count;
@@ -266,7 +266,7 @@ bool Vulkun::_init_default_renderpass() {
 }
 
 bool Vulkun::_init_framebuffers() {
-	VkFramebufferCreateInfo framebuffer_info = {};
+	VkFramebufferCreateInfo framebuffer_info{};
 	framebuffer_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 	framebuffer_info.pNext = nullptr;
 	framebuffer_info.renderPass = _render_pass;
@@ -296,7 +296,7 @@ bool Vulkun::_init_framebuffers() {
 
 bool Vulkun::_init_sync_structures() {
 	for (size_t i = 0; i < FRAME_OVERLAP; ++i) {
-		VkFenceCreateInfo fence_info = {};
+		VkFenceCreateInfo fence_info{};
 		fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 		fence_info.pNext = nullptr;
 		fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -307,7 +307,7 @@ bool Vulkun::_init_sync_structures() {
 			vkDestroyFence(_device, _frame_data[i].render_fence, nullptr);
 		});
 
-		VkSemaphoreCreateInfo semaphore_info = {};
+		VkSemaphoreCreateInfo semaphore_info{};
 		semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 		semaphore_info.pNext = nullptr;
 
@@ -340,7 +340,7 @@ bool Vulkun::_init_imgui() {
 		// { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, max_sets },
 	};
 
-	VkDescriptorPoolCreateInfo pool_info = {};
+	VkDescriptorPoolCreateInfo pool_info{};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	pool_info.pNext = nullptr;
 	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
@@ -354,7 +354,7 @@ bool Vulkun::_init_imgui() {
 	ImGui::CreateContext();
 	ImGui_ImplSDL2_InitForVulkan(_window);
 
-	ImGui_ImplVulkan_InitInfo imgui_vulkan_init_info = {};
+	ImGui_ImplVulkan_InitInfo imgui_vulkan_init_info{};
 	imgui_vulkan_init_info.Instance = _instance;
 	imgui_vulkan_init_info.PhysicalDevice = _physical_device;
 	imgui_vulkan_init_info.Device = _device;
@@ -490,7 +490,7 @@ bool Vulkun::_load_shader_module(const char *file_path, VkShaderModule *out_shad
 	file.close();
 
 	// Create the shader module
-	VkShaderModuleCreateInfo create_info = {};
+	VkShaderModuleCreateInfo create_info{};
 	create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
 	create_info.pNext = nullptr;
 	create_info.codeSize = buffer.size() * sizeof(uint32_t);
@@ -749,7 +749,7 @@ void Vulkun::draw() {
 	uint32_t swapchain_image_index;
 	VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, frame_data.present_semaphore, nullptr, &swapchain_image_index));
 
-	VkCommandBufferBeginInfo cmd_begin_info = {};
+	VkCommandBufferBeginInfo cmd_begin_info{};
 	cmd_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	cmd_begin_info.pNext = nullptr;
 	cmd_begin_info.pInheritanceInfo = nullptr;
@@ -770,7 +770,7 @@ void Vulkun::draw() {
 	const uint32_t clear_value_count = 2;
 	VkClearValue clear_values[clear_value_count] = { clear_color, clear_depth };
 
-	VkRenderPassBeginInfo render_pass_begin_info = {};
+	VkRenderPassBeginInfo render_pass_begin_info{};
 	render_pass_begin_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	render_pass_begin_info.pNext = nullptr;
 	render_pass_begin_info.renderPass = _render_pass;
@@ -801,7 +801,7 @@ void Vulkun::draw() {
 
 	VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-	VkSubmitInfo submit_info = {};
+	VkSubmitInfo submit_info{};
 	submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submit_info.pNext = nullptr;
 	submit_info.pWaitDstStageMask = &wait_stage;
@@ -814,7 +814,7 @@ void Vulkun::draw() {
 
 	VK_CHECK(vkQueueSubmit(_graphics_queue, 1, &submit_info, frame_data.render_fence));
 
-	VkPresentInfoKHR present_info = {};
+	VkPresentInfoKHR present_info{};
 	present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	present_info.pNext = nullptr;
 	present_info.waitSemaphoreCount = 1;
