@@ -31,7 +31,7 @@ glm::mat4 Camera::get_projection(float aspect) {
 void Camera::update(float delta_time) {
 	ImGui::Begin("Camera");
 	ImGui::SliderFloat("FOV", &fov, 1.0f, 180.0f);
-	ImGui::SliderFloat("Sensitivity", &_mouse_sens, 0.1f, 2.0f);
+	ImGui::SliderFloat("Sensitivity", &_mouse_sens, 50.0f, 500.0f);
 	ImGui::SliderFloat("Speed", &_speed, 1.0f, 100.0f);
 	ImGui::SliderFloat("Sprint Multiplier", &_sprint_mult, 1.0f, 10.0f);
 	ImGui::Text("Position: (%.2f, %.2f, %.2f)", transform.pos().x, transform.pos().y, transform.pos().z);
@@ -44,8 +44,6 @@ void Camera::update(float delta_time) {
 
 	transform.rotate(-_rot_amount.y * _mouse_sens * delta_time, transform.right());
 	transform.rotate(-_rot_amount.x * _mouse_sens * delta_time, glm::vec3(0, 1, 0));
-
-	glm::vec3 rot = transform.rot_euler();
 
 	if (glm::length(_move_input) > 0.0f) {
 		_move_input = glm::normalize(_move_input);

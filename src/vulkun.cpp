@@ -43,6 +43,8 @@ void Vulkun::init() {
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
 	_window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, window_flags);
 
+	_mouse.on_window_moved(SDL_GetWindowDisplayIndex(_window));
+
 	_deletion_queue.push_function([=, this]() {
 		SDL_DestroyWindow(_window);
 	});
@@ -634,6 +636,9 @@ void Vulkun::run() {
 				if (event.window.event == SDL_WINDOW_MAXIMIZED || event.window.event == SDL_WINDOW_SHOWN) {
 					_is_rendering_paused = false;
 				}
+				if (event.window.event == SDL_WINDOWEVENT_MOVED) {
+					_mouse.on_window_moved(SDL_GetWindowDisplayIndex(_window));
+				}
 			}
 
 			if (event.type == SDL_KEYUP) {
@@ -686,7 +691,7 @@ void Vulkun::run() {
 		ImGui::Text("Camera pos: %.2f, %.2f, %.2f", camera_pos.x, camera_pos.y, camera_pos.z);
 
 		ImGui::Text("Mouse pos: %d, %d", _mouse.pos.x, _mouse.pos.y);
-		ImGui::Text("Mouse delta: %d, %d", _mouse.delta.x, _mouse.delta.y);
+		ImGui::Text("Mouse delta: %.2f, %.2f", _mouse.delta.x, _mouse.delta.y);
 		ImGui::Text("Mouse left: %d, right: %d", _mouse.left, _mouse.right);
 
 		ImGui::End();
