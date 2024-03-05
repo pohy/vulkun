@@ -118,7 +118,7 @@ private:
 	// TODO: Either remove the pointer passing or figure why the material of triangles points to a nullptr
 	void _draw_objects(VkCommandBuffer command_buffer);
 
-	FrameData& _get_current_frame_data();
+	FrameData &_get_current_frame_data();
 
 public:
 	static Vulkun &get_singleton();

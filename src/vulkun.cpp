@@ -328,13 +328,14 @@ bool Vulkun::_init_descriptors() {
 	const size_t max_sets = 10;
 	std::vector<VkDescriptorPoolSize> pool_sizes{
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, max_sets },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, max_sets },
 	};
 
 	VkDescriptorPoolCreateInfo pool_info{};
 	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 	pool_info.pNext = nullptr;
 
-	pool_info.flags = 0;
+	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 	pool_info.maxSets = max_sets;
 	pool_info.poolSizeCount = pool_sizes.size();
 	pool_info.pPoolSizes = pool_sizes.data();
@@ -404,33 +405,6 @@ bool Vulkun::_init_descriptors() {
 }
 
 bool Vulkun::_init_imgui() {
-	const uint32_t max_sets = 1; //000;
-	// We'll need more dscriptor sets for textures and stuff
-	VkDescriptorPoolSize pool_sizes[] = {
-		// { VK_DESCRIPTOR_TYPE_SAMPLER, max_sets },
-		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, max_sets },
-		// { VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, max_sets },
-		// { VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, max_sets },
-		// { VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, max_sets },
-		// { VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, max_sets },
-		// { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, max_sets },
-		// { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, max_sets },
-		// { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, max_sets },
-		// { VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, max_sets },
-		// { VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, max_sets },
-	};
-
-	VkDescriptorPoolCreateInfo pool_info{};
-	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-	pool_info.pNext = nullptr;
-	pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-	pool_info.maxSets = max_sets;
-	pool_info.poolSizeCount = std::size(pool_sizes);
-	pool_info.pPoolSizes = pool_sizes;
-
-	VkDescriptorPool imgui_descriptor_pool;
-	VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr, &imgui_descriptor_pool));
-
 	ImGui::CreateContext();
 	ImGui_ImplSDL2_InitForVulkan(_window);
 
@@ -439,7 +413,7 @@ bool Vulkun::_init_imgui() {
 	imgui_vulkan_init_info.PhysicalDevice = _physical_device;
 	imgui_vulkan_init_info.Device = _device;
 	imgui_vulkan_init_info.Queue = _graphics_queue;
-	imgui_vulkan_init_info.DescriptorPool = imgui_descriptor_pool;
+	imgui_vulkan_init_info.DescriptorPool = _descriptor_pool;
 	imgui_vulkan_init_info.MinImageCount = 3;
 	imgui_vulkan_init_info.ImageCount = 3;
 	imgui_vulkan_init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
@@ -447,12 +421,10 @@ bool Vulkun::_init_imgui() {
 
 	ImGui_ImplVulkan_Init(&imgui_vulkan_init_info);
 
-	_deletion_queue.push_function([=, this]() {
+	_deletion_queue.push_function([=]() {
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplSDL2_Shutdown();
 		ImGui::DestroyContext();
-
-		vkDestroyDescriptorPool(_device, imgui_descriptor_pool, nullptr);
 	});
 
 	return true;
@@ -790,7 +762,6 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
 
 		// fmt::println("\t\tObject transform: {}", glm::to_string(object.transform));
 
-		// Mesh matrix = Model View Projection matrix
 		// fmt::println("\t\tModel matrix: {}", glm::to_string(mesh_matrix));
 
 		PushConstants push_constants = {
@@ -809,7 +780,6 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
 			// fmt::println("\t\tBound vertex buffer");
 		}
 
-		// TODO: Count draw calls
 		vkCmdDraw(command_buffer, render_object.pMesh->vertices.size(), 1, 0, 0);
 		_metrics.draw_calls++;
 		// fmt::println("\t\tDrawn object");

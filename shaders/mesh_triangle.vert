@@ -22,7 +22,7 @@ layout(push_constant) uniform constants
 
 void main() {
     vec4 pos = vec4(vertex_pos, 1.0f);
-    mat4 transform_mat = camera_data.view_proj * push_constants.model_matrix;
+    mat4 transform_mat = camera_data.proj * camera_data.view * push_constants.model_matrix;
 
     gl_Position = transform_mat * pos;
 
