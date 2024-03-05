@@ -53,6 +53,7 @@ void Vulkun::init() {
 	_is_initialized = _init_default_renderpass();
 	_is_initialized = _init_framebuffers();
 	_is_initialized = _init_sync_structures();
+	_is_initialized = _init_descriptors();
 	_is_initialized = _init_pipelines();
 	_is_initialized = _init_imgui();
 
@@ -323,6 +324,85 @@ bool Vulkun::_init_sync_structures() {
 	return true;
 }
 
+bool Vulkun::_init_descriptors() {
+	const size_t max_sets = 10;
+	std::vector<VkDescriptorPoolSize> pool_sizes{
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, max_sets },
+	};
+
+	VkDescriptorPoolCreateInfo pool_info{};
+	pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+	pool_info.pNext = nullptr;
+
+	pool_info.flags = 0;
+	pool_info.maxSets = max_sets;
+	pool_info.poolSizeCount = pool_sizes.size();
+	pool_info.pPoolSizes = pool_sizes.data();
+
+	VK_CHECK(vkCreateDescriptorPool(_device, &pool_info, nullptr, &_descriptor_pool));
+
+	_deletion_queue.push_function([=, this]() {
+		vkDestroyDescriptorPool(_device, _descriptor_pool, nullptr);
+	});
+
+	VkDescriptorSetLayoutBinding camera_data_binding{};
+	camera_data_binding.binding = 0;
+	camera_data_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	camera_data_binding.descriptorCount = 1;
+	camera_data_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+	VkDescriptorSetLayoutCreateInfo descriptor_layout_info{};
+	descriptor_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	descriptor_layout_info.pNext = nullptr;
+
+	descriptor_layout_info.flags = 0;
+	descriptor_layout_info.bindingCount = 1;
+	descriptor_layout_info.pBindings = &camera_data_binding;
+
+	vkCreateDescriptorSetLayout(_device, &descriptor_layout_info, nullptr, &_global_descriptors_layout);
+
+	_deletion_queue.push_function([=, this]() {
+		vkDestroyDescriptorSetLayout(_device, _global_descriptors_layout, nullptr);
+	});
+
+	for (size_t i = 0; i < FRAME_OVERLAP; ++i) {
+		_frame_data[i].camera_data_buffer = _create_buffer(sizeof(GPUCameraData), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		VkDescriptorSetAllocateInfo alloc_info{};
+		alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		alloc_info.pNext = nullptr;
+
+		alloc_info.descriptorPool = _descriptor_pool;
+		alloc_info.descriptorSetCount = 1;
+		alloc_info.pSetLayouts = &_global_descriptors_layout;
+
+		VK_CHECK(vkAllocateDescriptorSets(_device, &alloc_info, &_frame_data[i].global_descriptors));
+
+		VkDescriptorBufferInfo camera_data_buffer_info{};
+		camera_data_buffer_info.buffer = _frame_data[i].camera_data_buffer.buffer;
+		camera_data_buffer_info.offset = 0;
+		camera_data_buffer_info.range = sizeof(GPUCameraData);
+
+		VkWriteDescriptorSet set_write{};
+		set_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		set_write.pNext = nullptr;
+
+		set_write.dstBinding = 0;
+		set_write.dstSet = _frame_data[i].global_descriptors;
+		set_write.descriptorCount = 1;
+		set_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		set_write.pBufferInfo = &camera_data_buffer_info;
+
+		vkUpdateDescriptorSets(_device, 1, &set_write, 0, nullptr);
+
+		_deletion_queue.push_function([=, this]() {
+			vmaDestroyBuffer(_allocator, _frame_data[i].camera_data_buffer.buffer, _frame_data[i].camera_data_buffer.allocation);
+		});
+	}
+
+	return true;
+}
+
 bool Vulkun::_init_imgui() {
 	const uint32_t max_sets = 1; //000;
 	// We'll need more dscriptor sets for textures and stuff
@@ -386,8 +466,12 @@ bool Vulkun::_init_pipelines() {
 	};
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
+
 	pipeline_layout_info.pushConstantRangeCount = 1;
 	pipeline_layout_info.pPushConstantRanges = &push_constant;
+
+	pipeline_layout_info.setLayoutCount = 1;
+	pipeline_layout_info.pSetLayouts = &_global_descriptors_layout;
 
 	VkPipelineLayout pipeline_layout;
 	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &pipeline_layout));
@@ -540,24 +624,9 @@ void Vulkun::_load_meshes() {
 }
 
 void Vulkun::_upload_mesh(Mesh &mesh) {
-	VkBufferCreateInfo buffer_info = {};
-	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-	buffer_info.pNext = nullptr;
-	buffer_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-	buffer_info.size = mesh.size_of_vertices();
-
 	fmt::println("Will upload mesh with size: {}", mesh.vertices.size());
 
-	VmaAllocationCreateInfo vma_alloc_create_info = {};
-	vma_alloc_create_info.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-
-	VK_CHECK(vmaCreateBuffer(
-			_allocator,
-			&buffer_info,
-			&vma_alloc_create_info,
-			&mesh.vertex_buffer.buffer,
-			&mesh.vertex_buffer.allocation,
-			nullptr));
+	mesh.vertex_buffer = _create_buffer(mesh.size_of_vertices(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 	_deletion_queue.push_function([=, this]() {
 		vmaDestroyBuffer(_allocator, mesh.vertex_buffer.buffer, mesh.vertex_buffer.allocation);
@@ -670,12 +739,25 @@ void Vulkun::run() {
 }
 
 void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
+	FrameData &frame_data = _get_current_frame_data();
+
 	// fmt::println("Drawing {} objects", count);
 	_metrics.reset();
 
 	float aspect = (float)_window_extent.width / (float)_window_extent.height;
 	glm::mat4 projection = _camera.get_projection(aspect);
 	glm::mat4 view = _camera.get_view();
+
+	GPUCameraData camera_data{
+		.view = view,
+		.proj = projection,
+		.view_proj = projection * view,
+	};
+
+	void *data;
+	vmaMapMemory(_allocator, frame_data.camera_data_buffer.allocation, &data);
+	memcpy(data, &camera_data, sizeof(GPUCameraData));
+	vmaUnmapMemory(_allocator, frame_data.camera_data_buffer.allocation);
 
 	Material *pLast_material = nullptr;
 	Mesh *pLast_mesh = nullptr;
@@ -698,7 +780,10 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
 			ASSERT_MSG(render_object.pMaterial->pipeline != VK_NULL_HANDLE, "Material has no pipeline");
 
 			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_object.pMaterial->pipeline);
+			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_object.pMaterial->pipeline_layout, 0, 1, &frame_data.global_descriptors, 0, nullptr);
+
 			pLast_material = render_object.pMaterial;
+
 			_metrics.pipeline_bind_calls++;
 			// fmt::println("\t\tBound pipeline");
 		}
@@ -706,11 +791,10 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
 		// fmt::println("\t\tObject transform: {}", glm::to_string(object.transform));
 
 		// Mesh matrix = Model View Projection matrix
-		glm::mat4 mesh_matrix = projection * view * game_object.transform.get_model();
 		// fmt::println("\t\tModel matrix: {}", glm::to_string(mesh_matrix));
 
 		PushConstants push_constants = {
-			.render_matrix = mesh_matrix,
+			.model_matrix = game_object.transform.get_model(),
 			.frame_number = _frame_number + i,
 		};
 
@@ -732,6 +816,30 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
 	}
 
 	// fmt::println("\tFinished drawning {} objects", count);
+}
+
+AllocatedBuffer Vulkun::_create_buffer(size_t size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage) {
+	VkBufferCreateInfo buffer_info{};
+	buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+	buffer_info.pNext = nullptr;
+
+	buffer_info.size = size;
+	buffer_info.usage = usage;
+
+	VmaAllocationCreateInfo alloc_info{};
+	alloc_info.usage = memory_usage;
+
+	AllocatedBuffer buffer{};
+
+	VK_CHECK(vmaCreateBuffer(
+			_allocator,
+			&buffer_info,
+			&alloc_info,
+			&buffer.buffer,
+			&buffer.allocation,
+			nullptr));
+
+	return buffer;
 }
 
 FrameData &Vulkun::_get_current_frame_data() {

@@ -15,7 +15,7 @@
 struct IGameObject;
 
 struct PushConstants {
-	glm::mat4 render_matrix;
+	glm::mat4 model_matrix;
 	uint32_t frame_number;
 };
 
@@ -31,12 +31,21 @@ struct Metrics {
 	}
 };
 
+struct GPUCameraData {
+	glm::mat4 view;
+	glm::mat4 proj;
+	glm::mat4 view_proj;
+};
+
 struct FrameData {
 	VkSemaphore present_semaphore;
 	VkSemaphore render_semaphore;
 	VkFence render_fence;
 	VkCommandPool command_pool;
 	VkCommandBuffer command_buffer;
+	VkDescriptorSet global_descriptors;
+
+	AllocatedBuffer camera_data_buffer;
 };
 
 constexpr uint32_t FRAME_OVERLAP = 2;
@@ -61,6 +70,9 @@ private:
 	VkPhysicalDevice _physical_device;
 	VkDevice _device;
 	VkSurfaceKHR _surface;
+
+	VkDescriptorSetLayout _global_descriptors_layout;
+	VkDescriptorPool _descriptor_pool;
 
 	VmaAllocator _allocator;
 
@@ -95,11 +107,13 @@ private:
 	bool _init_pipelines();
 	bool _init_scene();
 	bool _init_imgui();
+	bool _init_descriptors();
 
 	bool _load_shader_module(const char *file_path, VkShaderModule *out_shader_module);
 	void _load_meshes();
 	void _upload_mesh(Mesh &mesh);
 	VkPipeline _create_vert_frag_pipeline(const std::string &vert_name, const std::string &frag_name, VkPipelineLayout &pipeline_layout);
+	AllocatedBuffer _create_buffer(size_t size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
 
 	// TODO: Either remove the pointer passing or figure why the material of triangles points to a nullptr
 	void _draw_objects(VkCommandBuffer command_buffer);
