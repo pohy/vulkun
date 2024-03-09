@@ -3,7 +3,7 @@
 Monkey::Monkey(Vulkun &vulkun, uint32_t offset) :
 		pVulkun(&vulkun), _offset(offset) {
 	render_object.pMesh = vulkun.get_mesh(MeshName::Monkey);
-	render_object.pMaterial = vulkun.get_material(MaterialName::Default);
+	render_object.pMaterial = vulkun.get_material(MaterialName::Lit);
 }
 
 void Monkey::update(float delta_time) {
@@ -20,12 +20,12 @@ void Monkey::update(float delta_time) {
 
 Triangle::Triangle(Vulkun &vulkun) {
 	render_object.pMesh = vulkun.get_mesh(MeshName::Triangle);
-	render_object.pMaterial = vulkun.get_material(MaterialName::ShiftingColors);
+	render_object.pMaterial = vulkun.get_material(MaterialName::Lit);
 }
 
 Impreza::Impreza(Vulkun &vulkun) {
 	render_object.pMesh = vulkun.get_mesh(MeshName::Impreza);
-	render_object.pMaterial = vulkun.get_material(MaterialName::Impreza);
+	render_object.pMaterial = vulkun.get_material(MaterialName::Lit);
 }
 
 void Impreza::update(float delta_time) {

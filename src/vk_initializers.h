@@ -1,6 +1,7 @@
 #pragma once
 
 #include "vk_types.h"
+#include "vulkan/vulkan_core.h"
 
 namespace vkinit {
 VkCommandPoolCreateInfo command_pool_create_info(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags = 0);
@@ -15,4 +16,6 @@ VkPipelineLayoutCreateInfo pipeline_layout_create_info();
 VkImageCreateInfo image_create_info(VkFormat format, VkImageUsageFlags usage_flags, VkExtent3D extent);
 VkImageViewCreateInfo image_view_create_info(VkFormat format, VkImage image, VkImageAspectFlags aspect_flags);
 VkPipelineDepthStencilStateCreateInfo depth_stencil_create_info(bool shuold_depth_test, bool should_depth_write, VkCompareOp compare_op);
+VkDescriptorSetLayoutBinding descriptor_set_layout_binding(VkDescriptorType type, VkShaderStageFlags stage_flags, uint32_t binding);
+VkWriteDescriptorSet write_descriptor_buffer(VkDescriptorType type, VkDescriptorSet dst_set, VkDescriptorBufferInfo *buffer_info, uint32_t binding);
 } //namespace vkinit

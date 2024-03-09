@@ -1,7 +1,9 @@
 #include "vulkun.h"
+#include "glm/fwd.hpp"
 #include "pipeline_builder.h"
 #include "vk_initializers.h"
 #include "vk_types.h"
+#include "vulkan/vulkan_core.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_vulkan.h>
@@ -12,6 +14,8 @@
 #include <imgui_impl_vulkan.h>
 
 #include <VkBootstrap.h>
+#include <cstddef>
+#include <cstdint>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -106,6 +110,9 @@ bool Vulkun::_init_vulkan() {
 
 	_device = vkb_device.device;
 	_physical_device = physical_device.physical_device;
+	_physical_device_properties = vkb_device.physical_device.properties;
+
+	fmt::println("Minimum buffer alignment: {}bytes", _physical_device_properties.limits.minUniformBufferOffsetAlignment);
 
 	_deletion_queue.push_function([=, this]() {
 		vkDestroyDevice(_device, nullptr);
@@ -330,6 +337,7 @@ bool Vulkun::_init_descriptors() {
 	const size_t max_sets = 10;
 	std::vector<VkDescriptorPoolSize> pool_sizes{
 		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, max_sets },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, max_sets },
 		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, max_sets },
 	};
 
@@ -348,24 +356,30 @@ bool Vulkun::_init_descriptors() {
 		vkDestroyDescriptorPool(_device, _descriptor_pool, nullptr);
 	});
 
-	VkDescriptorSetLayoutBinding camera_data_binding{};
-	camera_data_binding.binding = 0;
-	camera_data_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	camera_data_binding.descriptorCount = 1;
-	camera_data_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	VkDescriptorSetLayoutBinding camera_data_binding = vkinit::descriptor_set_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
+	VkDescriptorSetLayoutBinding scene_data_binding = vkinit::descriptor_set_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1);
+
+	std::vector<VkDescriptorSetLayoutBinding> global_bindings = { camera_data_binding, scene_data_binding };
 
 	VkDescriptorSetLayoutCreateInfo descriptor_layout_info{};
 	descriptor_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 	descriptor_layout_info.pNext = nullptr;
 
 	descriptor_layout_info.flags = 0;
-	descriptor_layout_info.bindingCount = 1;
-	descriptor_layout_info.pBindings = &camera_data_binding;
+	descriptor_layout_info.bindingCount = global_bindings.size();
+	descriptor_layout_info.pBindings = global_bindings.data();
 
 	vkCreateDescriptorSetLayout(_device, &descriptor_layout_info, nullptr, &_global_descriptors_layout);
 
 	_deletion_queue.push_function([=, this]() {
 		vkDestroyDescriptorSetLayout(_device, _global_descriptors_layout, nullptr);
+	});
+
+	const size_t scene_param_buffer_size = FRAME_OVERLAP * _pad_uniform_buffer_size(sizeof(GPUSceneData));
+	_scene_data_buffer = _create_buffer(scene_param_buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+	_deletion_queue.push_function([=, this]() {
+		vmaDestroyBuffer(_allocator, _scene_data_buffer.buffer, _scene_data_buffer.allocation);
 	});
 
 	for (size_t i = 0; i < FRAME_OVERLAP; ++i) {
@@ -386,17 +400,17 @@ bool Vulkun::_init_descriptors() {
 		camera_data_buffer_info.offset = 0;
 		camera_data_buffer_info.range = sizeof(GPUCameraData);
 
-		VkWriteDescriptorSet set_write{};
-		set_write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		set_write.pNext = nullptr;
+		VkDescriptorBufferInfo scene_data_buffer_info{};
+		scene_data_buffer_info.buffer = _scene_data_buffer.buffer;
+		scene_data_buffer_info.offset = 0;
+		scene_data_buffer_info.range = sizeof(GPUSceneData);
 
-		set_write.dstBinding = 0;
-		set_write.dstSet = _frame_data[i].global_descriptors;
-		set_write.descriptorCount = 1;
-		set_write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		set_write.pBufferInfo = &camera_data_buffer_info;
+		VkWriteDescriptorSet camera_set_write = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _frame_data[i].global_descriptors, &camera_data_buffer_info, 0);
+		VkWriteDescriptorSet scene_set_write = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, _frame_data[i].global_descriptors, &scene_data_buffer_info, 1);
 
-		vkUpdateDescriptorSets(_device, 1, &set_write, 0, nullptr);
+		std::vector<VkWriteDescriptorSet> set_writes = { camera_set_write, scene_set_write };
+
+		vkUpdateDescriptorSets(_device, set_writes.size(), set_writes.data(), 0, nullptr);
 
 		_deletion_queue.push_function([=, this]() {
 			vmaDestroyBuffer(_allocator, _frame_data[i].camera_data_buffer.buffer, _frame_data[i].camera_data_buffer.allocation);
@@ -462,6 +476,9 @@ bool Vulkun::_init_pipelines() {
 
 	// I M P R E Z A    M A T E R I A L
 	create_material(MaterialName::Impreza, "mesh_triangle", "impreza", pipeline_layout);
+
+	// L I T   M A T E R I A L
+	create_material(MaterialName::Lit, "mesh_triangle", "default_lit", pipeline_layout);
 
 	return true;
 }
@@ -736,6 +753,17 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
 	memcpy(data, &camera_data, sizeof(GPUCameraData));
 	vmaUnmapMemory(_allocator, frame_data.camera_data_buffer.allocation);
 
+	float ambient_offset = _frame_number / 1200.0f;
+	_scene_data.ambient_color = glm::vec4{ abs(sin(ambient_offset)), abs(cos(ambient_offset)), abs(sin(ambient_offset * 0.5f)), 1.0f };
+
+	char *scene_data_ptr;
+	vmaMapMemory(_allocator, _scene_data_buffer.allocation, (void **)&scene_data_ptr);
+	// uint32_t frame_idx = (uint32_t)floor(_frame_number / 300) % FRAME_OVERLAP;
+	uint32_t frame_idx = _frame_number % FRAME_OVERLAP;
+	scene_data_ptr += frame_idx * _pad_uniform_buffer_size(sizeof(GPUSceneData));
+	memcpy(scene_data_ptr, &_scene_data, sizeof(GPUSceneData));
+	vmaUnmapMemory(_allocator, _scene_data_buffer.allocation);
+
 	Material *pLast_material = nullptr;
 	Mesh *pLast_mesh = nullptr;
 
@@ -757,7 +785,9 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
 			ASSERT_MSG(render_object.pMaterial->pipeline != VK_NULL_HANDLE, "Material has no pipeline");
 
 			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_object.pMaterial->pipeline);
-			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_object.pMaterial->pipeline_layout, 0, 1, &frame_data.global_descriptors, 0, nullptr);
+
+			uint32_t dynamic_offset = frame_idx * _pad_uniform_buffer_size(sizeof(GPUSceneData));
+			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_object.pMaterial->pipeline_layout, 0, 1, &frame_data.global_descriptors, 1, &dynamic_offset);
 
 			pLast_material = render_object.pMaterial;
 
@@ -815,6 +845,15 @@ AllocatedBuffer Vulkun::_create_buffer(size_t size, VkBufferUsageFlags usage, Vm
 			nullptr));
 
 	return buffer;
+}
+
+size_t Vulkun::_pad_uniform_buffer_size(size_t original_size) {
+	size_t min_ubo_alignment = _physical_device_properties.limits.minUniformBufferOffsetAlignment;
+	size_t aligned_size = original_size;
+	if (min_ubo_alignment > 0) {
+		aligned_size = (aligned_size + min_ubo_alignment - 1) & ~(min_ubo_alignment - 1);
+	}
+	return aligned_size;
 }
 
 FrameData &Vulkun::_get_current_frame_data() {

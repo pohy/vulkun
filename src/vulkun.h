@@ -37,6 +37,14 @@ struct GPUCameraData {
 	glm::mat4 view_proj;
 };
 
+struct GPUSceneData {
+	glm::vec4 sun_direction;
+	glm::vec4 sun_color;
+	glm::vec4 ambient_color; // w for intensity
+	glm::vec4 fog_color; // w for exponent
+	glm::vec4 fog_distances; // x for start, y for end, zw unused
+};
+
 struct FrameData {
 	VkSemaphore present_semaphore;
 	VkSemaphore render_semaphore;
@@ -57,8 +65,12 @@ private:
 	int _selected_pipeline_idx = 0;
 	bool _is_initialized = false;
 	bool _is_rendering_paused = false;
+
 	Metrics _metrics;
 	FrameData _frame_data[FRAME_OVERLAP];
+
+	GPUSceneData _scene_data;
+	AllocatedBuffer _scene_data_buffer; // Date for all FRAME_OVERLAP be stored in the single buffer
 
 	VkExtent2D _window_extent = { 1600, 900 };
 	struct SDL_Window *_window = nullptr;
@@ -68,6 +80,7 @@ private:
 	VkInstance _instance;
 	VkDebugUtilsMessengerEXT _debug_messenger;
 	VkPhysicalDevice _physical_device;
+	VkPhysicalDeviceProperties _physical_device_properties;
 	VkDevice _device;
 	VkSurfaceKHR _surface;
 
@@ -114,6 +127,7 @@ private:
 	void _upload_mesh(Mesh &mesh);
 	VkPipeline _create_vert_frag_pipeline(const std::string &vert_name, const std::string &frag_name, VkPipelineLayout &pipeline_layout);
 	AllocatedBuffer _create_buffer(size_t size, VkBufferUsageFlags usage, VmaMemoryUsage memory_usage);
+	size_t _pad_uniform_buffer_size(size_t original_size);
 
 	// TODO: Either remove the pointer passing or figure why the material of triangles points to a nullptr
 	void _draw_objects(VkCommandBuffer command_buffer);

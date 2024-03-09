@@ -1,4 +1,5 @@
 #include "vk_initializers.h"
+#include "vulkan/vulkan_core.h"
 
 VkCommandPoolCreateInfo vkinit::command_pool_create_info(uint32_t queueFamilyIndex, VkCommandPoolCreateFlags flags) {
 	VkCommandPoolCreateInfo info{};
@@ -152,4 +153,29 @@ VkPipelineDepthStencilStateCreateInfo vkinit::depth_stencil_create_info(bool shu
 	info.stencilTestEnable = VK_FALSE;
 
 	return info;
+}
+
+VkDescriptorSetLayoutBinding vkinit::descriptor_set_layout_binding(VkDescriptorType type, VkShaderStageFlags stage_flags, uint32_t binding) {
+	VkDescriptorSetLayoutBinding set_binding{};
+	set_binding.descriptorCount = 1;
+	set_binding.pImmutableSamplers = nullptr;
+	set_binding.binding = binding;
+	set_binding.descriptorType = type;
+	set_binding.stageFlags = stage_flags;
+
+	return set_binding;
+}
+
+VkWriteDescriptorSet vkinit::write_descriptor_buffer(VkDescriptorType type, VkDescriptorSet dst_set, VkDescriptorBufferInfo *buffer_info, uint32_t binding) {
+	VkWriteDescriptorSet write_set{};
+	write_set.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write_set.pNext = nullptr;
+
+	write_set.descriptorCount = 1;
+	write_set.dstSet = dst_set;
+	write_set.dstBinding = binding;
+	write_set.descriptorType = type;
+	write_set.pBufferInfo = buffer_info;
+
+	return write_set;
 }
