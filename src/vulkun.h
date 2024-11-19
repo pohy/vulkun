@@ -38,9 +38,9 @@ struct GPUCameraData {
 };
 
 struct GPUSceneData {
-	glm::vec4 sun_direction;
-	glm::vec4 sun_color;
-	glm::vec4 ambient_color; // w for intensity
+	glm::vec4 sun_direction{ -1.0f, -1.0f, -1.0f, 0.0f };
+	glm::vec4 sun_color{ 1.0f, 1.0f, 1.0f, 1.0f };
+	glm::vec4 ambient_color{ 1.0f, 1.0f, 1.0f, 0.2f }; // w for intensity
 	glm::vec4 fog_color; // w for exponent
 	glm::vec4 fog_distances; // x for start, y for end, zw unused
 };

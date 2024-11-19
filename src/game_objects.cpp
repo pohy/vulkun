@@ -4,9 +4,14 @@ Monkey::Monkey(Vulkun &vulkun, uint32_t offset) :
 		pVulkun(&vulkun), _offset(offset) {
 	render_object.pMesh = vulkun.get_mesh(MeshName::Monkey);
 	render_object.pMaterial = vulkun.get_material(MaterialName::Lit);
+	_apply_next_pos(1.0f);
 }
 
 void Monkey::update(float delta_time) {
+	// _apply_next_pos(delta_time);
+}
+
+void Monkey::_apply_next_pos(float delta_time) {
 	uint32_t frame_number = pVulkun->frame_number();
 	if (_offset == 0) {
 		float sign = glm::sign(sin(frame_number * 0.08f));

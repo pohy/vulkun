@@ -22,7 +22,7 @@ struct IGameObject {
 	IGameObject() = default;
 	virtual ~IGameObject() = default;
 
-	virtual void update(float delta_time){};
+	virtual void update(float delta_time) {};
 
 	virtual std::string name() = 0;
 };
@@ -31,6 +31,7 @@ class Monkey : public IGameObject {
 private:
 	Vulkun *pVulkun;
 	uint32_t _offset;
+	void _apply_next_pos(float delta_time);
 
 public:
 	// TODO: Coupling to Vulkun doesn't seem right

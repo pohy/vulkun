@@ -468,14 +468,14 @@ bool Vulkun::_init_pipelines() {
 		vkDestroyPipelineLayout(_device, pipeline_layout, nullptr);
 	});
 
-	// D E F A U L T   M A T E R I A L
-	create_material(MaterialName::Default, "mesh_triangle", "colored_triangle", pipeline_layout);
+	// // D E F A U L T   M A T E R I A L
+	// create_material(MaterialName::Default, "mesh_triangle", "colored_triangle", pipeline_layout);
 
-	// S H I F T I N G   C O L O R S   M A T E R I A L
-	create_material(MaterialName::ShiftingColors, "mesh_triangle", "shifting_colors", pipeline_layout);
+	// // S H I F T I N G   C O L O R S   M A T E R I A L
+	// create_material(MaterialName::ShiftingColors, "mesh_triangle", "shifting_colors", pipeline_layout);
 
-	// I M P R E Z A    M A T E R I A L
-	create_material(MaterialName::Impreza, "mesh_triangle", "impreza", pipeline_layout);
+	// // I M P R E Z A    M A T E R I A L
+	// create_material(MaterialName::Impreza, "mesh_triangle", "impreza", pipeline_layout);
 
 	// L I T   M A T E R I A L
 	create_material(MaterialName::Lit, "mesh_triangle", "default_lit", pipeline_layout);
@@ -753,8 +753,16 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
 	memcpy(data, &camera_data, sizeof(GPUCameraData));
 	vmaUnmapMemory(_allocator, frame_data.camera_data_buffer.allocation);
 
-	float ambient_offset = _frame_number / 1200.0f;
-	_scene_data.ambient_color = glm::vec4{ abs(sin(ambient_offset)), abs(cos(ambient_offset)), abs(sin(ambient_offset * 0.5f)), 1.0f };
+	// float ambient_offset = _frame_number / 1200.0f;
+	// _scene_data.ambient_color = glm::vec4{ abs(sin(ambient_offset)), abs(cos(ambient_offset)), abs(sin(ambient_offset * 0.5f)), 1.0f };
+	// _scene_data.ambient_color = glm::vec4{ abs(sin(ambient_offset)), 1.0f, 1.0f, 0.3f };
+	ImGui::Begin("Scene data");
+
+	ImGui::ColorEdit4("Ambient color", &_scene_data.ambient_color.x);
+	ImGui::DragFloat3("Sun direction", &_scene_data.sun_direction.x, 0.01f);
+
+	ImGui::End();
+
 
 	char *scene_data_ptr;
 	vmaMapMemory(_allocator, _scene_data_buffer.allocation, (void **)&scene_data_ptr);
