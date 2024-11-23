@@ -1,0 +1,303 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXFileReference section */
+		DE7996032CF21F1300EA0F46 /* camera.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = camera.h; sourceTree = "<group>"; };
+		DE7996042CF21F1300EA0F46 /* camera.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = camera.cpp; sourceTree = "<group>"; };
+		DE7996052CF21F1300EA0F46 /* camera.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = camera.o; sourceTree = "<group>"; };
+		DE7996062CF21F1300EA0F46 /* deletion_queue.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = deletion_queue.h; sourceTree = "<group>"; };
+		DE7996072CF21F1300EA0F46 /* game_objects.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = game_objects.h; sourceTree = "<group>"; };
+		DE7996082CF21F1300EA0F46 /* game_objects.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = game_objects.cpp; sourceTree = "<group>"; };
+		DE7996092CF21F1300EA0F46 /* game_objects.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = game_objects.o; sourceTree = "<group>"; };
+		DE79960A2CF21F1300EA0F46 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		DE79960B2CF21F1300EA0F46 /* main.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = main.o; sourceTree = "<group>"; };
+		DE79960C2CF21F1300EA0F46 /* material.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = material.h; sourceTree = "<group>"; };
+		DE79960D2CF21F1300EA0F46 /* mesh.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mesh.h; sourceTree = "<group>"; };
+		DE79960E2CF21F1300EA0F46 /* mesh.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = mesh.cpp; sourceTree = "<group>"; };
+		DE79960F2CF21F1300EA0F46 /* mesh.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = mesh.o; sourceTree = "<group>"; };
+		DE7996102CF21F1300EA0F46 /* mesh_manager.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = mesh_manager.o; sourceTree = "<group>"; };
+		DE7996112CF21F1300EA0F46 /* mouse.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = mouse.h; sourceTree = "<group>"; };
+		DE7996122CF21F1300EA0F46 /* pipeline_builder.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = pipeline_builder.h; sourceTree = "<group>"; };
+		DE7996132CF21F1300EA0F46 /* pipeline_builder.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = pipeline_builder.cpp; sourceTree = "<group>"; };
+		DE7996142CF21F1300EA0F46 /* pipeline_builder.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = pipeline_builder.o; sourceTree = "<group>"; };
+		DE7996152CF21F1300EA0F46 /* test.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = test.o; sourceTree = "<group>"; };
+		DE7996162CF21F1300EA0F46 /* tinyobjloader.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = tinyobjloader.cpp; sourceTree = "<group>"; };
+		DE7996172CF21F1300EA0F46 /* tinyobjloader.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = tinyobjloader.o; sourceTree = "<group>"; };
+		DE7996182CF21F1300EA0F46 /* transform.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = transform.h; sourceTree = "<group>"; };
+		DE7996192CF21F1300EA0F46 /* vk_initializers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vk_initializers.h; sourceTree = "<group>"; };
+		DE79961A2CF21F1300EA0F46 /* vk_initializers.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = vk_initializers.cpp; sourceTree = "<group>"; };
+		DE79961B2CF21F1300EA0F46 /* vk_initializers.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = vk_initializers.o; sourceTree = "<group>"; };
+		DE79961C2CF21F1300EA0F46 /* vk_mem_alloc.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = vk_mem_alloc.cpp; sourceTree = "<group>"; };
+		DE79961D2CF21F1300EA0F46 /* vk_mem_alloc.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = vk_mem_alloc.o; sourceTree = "<group>"; };
+		DE79961E2CF21F1300EA0F46 /* vk_mesh.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = vk_mesh.o; sourceTree = "<group>"; };
+		DE79961F2CF21F1300EA0F46 /* vk_types.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vk_types.h; sourceTree = "<group>"; };
+		DE7996202CF21F1300EA0F46 /* vulkun.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = vulkun.h; sourceTree = "<group>"; };
+		DE7996212CF21F1300EA0F46 /* vulkun.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = vulkun.cpp; sourceTree = "<group>"; };
+		DE7996222CF21F1300EA0F46 /* vulkun.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = vulkun.o; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		DE7995F82CF21E8700EA0F46 = {
+			isa = PBXGroup;
+			children = (
+				DE7996232CF21F1300EA0F46 /* src */,
+			);
+			sourceTree = "<group>";
+		};
+		DE7996232CF21F1300EA0F46 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				DE7996032CF21F1300EA0F46 /* camera.h */,
+				DE7996042CF21F1300EA0F46 /* camera.cpp */,
+				DE7996052CF21F1300EA0F46 /* camera.o */,
+				DE7996062CF21F1300EA0F46 /* deletion_queue.h */,
+				DE7996072CF21F1300EA0F46 /* game_objects.h */,
+				DE7996082CF21F1300EA0F46 /* game_objects.cpp */,
+				DE7996092CF21F1300EA0F46 /* game_objects.o */,
+				DE79960A2CF21F1300EA0F46 /* main.cpp */,
+				DE79960B2CF21F1300EA0F46 /* main.o */,
+				DE79960C2CF21F1300EA0F46 /* material.h */,
+				DE79960D2CF21F1300EA0F46 /* mesh.h */,
+				DE79960E2CF21F1300EA0F46 /* mesh.cpp */,
+				DE79960F2CF21F1300EA0F46 /* mesh.o */,
+				DE7996102CF21F1300EA0F46 /* mesh_manager.o */,
+				DE7996112CF21F1300EA0F46 /* mouse.h */,
+				DE7996122CF21F1300EA0F46 /* pipeline_builder.h */,
+				DE7996132CF21F1300EA0F46 /* pipeline_builder.cpp */,
+				DE7996142CF21F1300EA0F46 /* pipeline_builder.o */,
+				DE7996152CF21F1300EA0F46 /* test.o */,
+				DE7996162CF21F1300EA0F46 /* tinyobjloader.cpp */,
+				DE7996172CF21F1300EA0F46 /* tinyobjloader.o */,
+				DE7996182CF21F1300EA0F46 /* transform.h */,
+				DE7996192CF21F1300EA0F46 /* vk_initializers.h */,
+				DE79961A2CF21F1300EA0F46 /* vk_initializers.cpp */,
+				DE79961B2CF21F1300EA0F46 /* vk_initializers.o */,
+				DE79961C2CF21F1300EA0F46 /* vk_mem_alloc.cpp */,
+				DE79961D2CF21F1300EA0F46 /* vk_mem_alloc.o */,
+				DE79961E2CF21F1300EA0F46 /* vk_mesh.o */,
+				DE79961F2CF21F1300EA0F46 /* vk_types.h */,
+				DE7996202CF21F1300EA0F46 /* vulkun.h */,
+				DE7996212CF21F1300EA0F46 /* vulkun.cpp */,
+				DE7996222CF21F1300EA0F46 /* vulkun.o */,
+			);
+			path = src;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXLegacyTarget section */
+		DE7995FD2CF21E8700EA0F46 /* vulkun */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = "$(ACTION)";
+			buildConfigurationList = DE7996002CF21E8700EA0F46 /* Build configuration list for PBXLegacyTarget "vulkun" */;
+			buildPhases = (
+			);
+			buildToolPath = "${PROJECT_DIR}/scripts/build.sh";
+			buildWorkingDirectory = /Users/pohy/dev/cpp/vulkun;
+			dependencies = (
+			);
+			name = vulkun;
+			packageProductDependencies = (
+			);
+			passBuildSettingsInEnvironment = 1;
+			productName = vulkun;
+		};
+/* End PBXLegacyTarget section */
+
+/* Begin PBXProject section */
+		DE7995F92CF21E8700EA0F46 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1610;
+				TargetAttributes = {
+					DE7995FD2CF21E8700EA0F46 = {
+						CreatedOnToolsVersion = 16.1;
+					};
+				};
+			};
+			buildConfigurationList = DE7995FC2CF21E8700EA0F46 /* Build configuration list for PBXProject "vulkun" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = DE7995F82CF21E8700EA0F46;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				DE7995FD2CF21E8700EA0F46 /* vulkun */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin XCBuildConfiguration section */
+		DE7995FE2CF21E8700EA0F46 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+			};
+			name = Debug;
+		};
+		DE7995FF2CF21E8700EA0F46 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = YES;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+			};
+			name = Release;
+		};
+		DE7996012CF21E8700EA0F46 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUGGING_SYMBOLS = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		DE7996022CF21E8700EA0F46 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		DE7995FC2CF21E8700EA0F46 /* Build configuration list for PBXProject "vulkun" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE7995FE2CF21E8700EA0F46 /* Debug */,
+				DE7995FF2CF21E8700EA0F46 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE7996002CF21E8700EA0F46 /* Build configuration list for PBXLegacyTarget "vulkun" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE7996012CF21E8700EA0F46 /* Debug */,
+				DE7996022CF21E8700EA0F46 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = DE7995F92CF21E8700EA0F46 /* Project object */;
+}
