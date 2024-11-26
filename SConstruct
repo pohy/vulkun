@@ -1,5 +1,14 @@
 import platform
 
+AddOption(
+    '--release',
+    dest='release',
+    action='store_true',
+    help='Build in release mode',
+    default=False,
+)
+
+is_release = GetOption('release')
 os = platform.system().lower()
 
 env = Environment(
@@ -18,12 +27,17 @@ env = Environment(
 )
 
 if os == "darwin":
-    env.Append(CXXFLAGS=[
-        "-std=c++20",
-        "-g",
-        "-O0",
-        "-Wall",
-    ])
+    default_flags = ["-std=c++20", "-Wall"]
+    release_flags = ["-O3", "-DNDEBUG"]
+    debug_flags = ["-g", "-O0"]
+
+    flags = default_flags
+    if is_release:
+        flags = flags + release_flags
+    else:
+        flags = flags + debug_flags
+
+    env.Append(CXXFLAGS=flags)
     env.Append(
         CPPPATH=[
             "/opt/homebrew/include",
@@ -73,8 +87,12 @@ env.Library(
 env.Tool("compilation_db")
 env.CompilationDatabase()
 
+bin_name = "vulkun"
+if is_release:
+    bin_name += "-release"
+
 env.Program(
-    "bin/vulkun",
+    "bin/" + bin_name,
     [
         Glob("src/*.cpp"),
         Glob("third_party/vk-bootstrap/src/*.cpp"),
