@@ -86,6 +86,7 @@ bool Mesh::load_from_obj(std::string file_path) {
 							attrib.colors[3 * idx.vertex_index + 2],
 					},
 				};
+				vertex.color = vertex.normal;
 				vertices.push_back(vertex);
 			}
 			mesh_index_offset += face_vert_count;

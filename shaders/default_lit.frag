@@ -14,11 +14,16 @@ layout(set = 0, binding = 1) uniform SceneData {
     vec4 fog_distances; // x for start, y for end, zw unused
 } scene_data;
 
+layout(set = 1, binding = 0) uniform MaterialUniforms {
+    vec4 albedo_color;
+} material_uniforms;
+
 void main()
 {
-    vec3 object_color = in_color;
+    vec3 object_color = material_uniforms.albedo_color.xyz; //in_diffuse_color; //in_color;
     vec3 normal = normalize(in_normal);
-    vec3 light_dir = normalize(scene_data.sun_direction.xyz - in_frag_pos);
+
+    vec3 light_dir = normalize(-scene_data.sun_direction.xyz);
     float diffuse = max(dot(normal, light_dir), 0.0);
     vec3 diffuse_color = scene_data.sun_color.xyz * diffuse;
 

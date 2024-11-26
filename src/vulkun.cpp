@@ -1,5 +1,6 @@
 #include "vulkun.h"
 #include "glm/fwd.hpp"
+#include "material.h"
 #include "pipeline_builder.h"
 #include "vk_initializers.h"
 #include "vk_types.h"
@@ -359,7 +360,7 @@ bool Vulkun::_init_descriptors() {
 	VkDescriptorSetLayoutBinding camera_data_binding = vkinit::descriptor_set_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT, 0);
 	VkDescriptorSetLayoutBinding scene_data_binding = vkinit::descriptor_set_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 1);
 
-	std::vector<VkDescriptorSetLayoutBinding> global_bindings = { camera_data_binding, scene_data_binding };
+	std::array global_bindings{ camera_data_binding, scene_data_binding };
 
 	VkDescriptorSetLayoutCreateInfo descriptor_layout_info{};
 	descriptor_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
@@ -408,7 +409,7 @@ bool Vulkun::_init_descriptors() {
 		VkWriteDescriptorSet camera_set_write = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, _frame_data[i].global_descriptors, &camera_data_buffer_info, 0);
 		VkWriteDescriptorSet scene_set_write = vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, _frame_data[i].global_descriptors, &scene_data_buffer_info, 1);
 
-		std::vector<VkWriteDescriptorSet> set_writes = { camera_set_write, scene_set_write };
+		std::array set_writes = { camera_set_write, scene_set_write };
 
 		vkUpdateDescriptorSets(_device, set_writes.size(), set_writes.data(), 0, nullptr);
 
@@ -453,13 +454,37 @@ bool Vulkun::_init_pipelines() {
 		.size = sizeof(PushConstants),
 	};
 
+	VkDescriptorSetLayout material_descriptor_set_layout;
+
+	VkDescriptorSetLayoutBinding material_uniforms_binding = vkinit::descriptor_set_layout_binding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_FRAGMENT_BIT, 0);
+
+	std::array material_bindings{ material_uniforms_binding };
+
+	VkDescriptorSetLayoutCreateInfo descriptor_set_layout_info{};
+	descriptor_set_layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+	descriptor_set_layout_info.pNext = nullptr;
+	descriptor_set_layout_info.flags = 0;
+	descriptor_set_layout_info.bindingCount = material_bindings.size();
+	descriptor_set_layout_info.pBindings = material_bindings.data();
+
+	vkCreateDescriptorSetLayout(_device, &descriptor_set_layout_info, nullptr, &material_descriptor_set_layout);
+
+	_deletion_queue.push_function([=, this]() {
+		vkDestroyDescriptorSetLayout(_device, material_descriptor_set_layout, nullptr);
+	});
+
+	std::array set_layouts{
+		_global_descriptors_layout,
+		material_descriptor_set_layout,
+	};
+
 	VkPipelineLayoutCreateInfo pipeline_layout_info = vkinit::pipeline_layout_create_info();
 
 	pipeline_layout_info.pushConstantRangeCount = 1;
 	pipeline_layout_info.pPushConstantRanges = &push_constant;
 
-	pipeline_layout_info.setLayoutCount = 1;
-	pipeline_layout_info.pSetLayouts = &_global_descriptors_layout;
+	pipeline_layout_info.setLayoutCount = set_layouts.size();
+	pipeline_layout_info.pSetLayouts = set_layouts.data();
 
 	VkPipelineLayout pipeline_layout;
 	VK_CHECK(vkCreatePipelineLayout(_device, &pipeline_layout_info, nullptr, &pipeline_layout));
@@ -468,6 +493,15 @@ bool Vulkun::_init_pipelines() {
 		vkDestroyPipelineLayout(_device, pipeline_layout, nullptr);
 	});
 
+	// Outline:
+	// - Create descriptor set layout bindings
+	// - Create descriptor set layout
+	// - Create and allocate buffer for the uniform data
+	// - Allocate descriptor set
+	// - Create uniform buffer info
+	// - Create descriptor set write
+	// - Update the descriptor set with the writes
+
 	// // D E F A U L T   M A T E R I A L
 	// create_material(MaterialName::Default, "mesh_triangle", "colored_triangle", pipeline_layout);
 
@@ -475,10 +509,10 @@ bool Vulkun::_init_pipelines() {
 	// create_material(MaterialName::ShiftingColors, "mesh_triangle", "shifting_colors", pipeline_layout);
 
 	// // I M P R E Z A    M A T E R I A L
-	// create_material(MaterialName::Impreza, "mesh_triangle", "impreza", pipeline_layout);
+	create_material(MaterialName::Impreza, "mesh_triangle", "default_lit", pipeline_layout, &material_descriptor_set_layout);
 
 	// L I T   M A T E R I A L
-	create_material(MaterialName::Lit, "mesh_triangle", "default_lit", pipeline_layout);
+	create_material(MaterialName::Lit, "mesh_triangle", "default_lit", pipeline_layout, &material_descriptor_set_layout);
 
 	return true;
 }
@@ -527,15 +561,14 @@ bool Vulkun::_init_scene() {
 
 	pKing_ape->transform.look_at(_game_objects[1]->transform.pos());
 
-	for (int x = -20; x <= 20; ++x) {
-		for (int y = -20; y <= 20; ++y) {
-			IGameObject *pTriangle = new Triangle(*this);
-			pTriangle->transform.translate(glm::vec3{ x, -4 + abs(y) * y * 0.1f, -y });
-			pTriangle->transform.set_scale(glm::vec3{ 0.3f });
-
-			_game_objects.push_back(pTriangle);
-		}
-	}
+	// for (int x = -20; x <= 20; ++x) {
+	// 	for (int y = -20; y <= 20; ++y) {
+	// 		IGameObject *pTriangle = new Triangle(*this);
+	// 		pTriangle->transform.translate(glm::vec3{ x, -4 + abs(y) * y * 0.1f, -y });
+	// 		pTriangle->transform.set_scale(glm::vec3{ 0.3f });
+	// 		_game_objects.push_back(pTriangle);
+	// 	}
+	// }
 
 	IGameObject *pImpreza = new Impreza(*this);
 	pImpreza->transform.translate(glm::vec3{ 0, -2, 0 });
@@ -726,13 +759,25 @@ void Vulkun::run() {
 			game_object->update(_delta_time);
 		}
 
+		ImGui::Begin("Materials");
+		for (auto &[name, material] : _materials) {
+			// ImGui::Text("Material: %s", name.c_str());
+			auto label = fmt::format("{} albedo", name);
+			ImGui::ColorEdit4(label.c_str(), &material.uniforms.albedo_color.x);
+		}
+		ImGui::End();
+
 		draw();
 
 		_delta_time = (SDL_GetTicks() - start_time) / 1000.0f;
+
+		// if (_frame_number > 0)
+		// 	should_quit = true;
 	}
 }
 
 void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
+	static int i_threshold = 0;
 	FrameData &frame_data = _get_current_frame_data();
 
 	// fmt::println("Drawing {} objects", count);
@@ -748,9 +793,9 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
 		.view_proj = projection * view,
 	};
 
-	void *data;
-	vmaMapMemory(_allocator, frame_data.camera_data_buffer.allocation, &data);
-	memcpy(data, &camera_data, sizeof(GPUCameraData));
+	void *camera_data_ptr;
+	vmaMapMemory(_allocator, frame_data.camera_data_buffer.allocation, &camera_data_ptr);
+	memcpy(camera_data_ptr, &camera_data, sizeof(GPUCameraData));
 	vmaUnmapMemory(_allocator, frame_data.camera_data_buffer.allocation);
 
 	// float ambient_offset = _frame_number / 1200.0f;
@@ -763,11 +808,11 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
 
 	ImGui::End();
 
+	uint32_t frame_idx = _frame_number % FRAME_OVERLAP;
 
 	char *scene_data_ptr;
 	vmaMapMemory(_allocator, _scene_data_buffer.allocation, (void **)&scene_data_ptr);
 	// uint32_t frame_idx = (uint32_t)floor(_frame_number / 300) % FRAME_OVERLAP;
-	uint32_t frame_idx = _frame_number % FRAME_OVERLAP;
 	scene_data_ptr += frame_idx * _pad_uniform_buffer_size(sizeof(GPUSceneData));
 	memcpy(scene_data_ptr, &_scene_data, sizeof(GPUSceneData));
 	vmaUnmapMemory(_allocator, _scene_data_buffer.allocation);
@@ -787,19 +832,30 @@ void Vulkun::_draw_objects(VkCommandBuffer command_buffer) {
 		// fmt::println("\tDrawing object {}", i);
 		IGameObject &game_object = *sorted_game_objects[i];
 		RenderObject &render_object = game_object.render_object;
+		Material &material = *render_object.pMaterial;
 
-		if (pLast_material != render_object.pMaterial) {
+		if (pLast_material != &material) {
 			ASSERT_MSG(render_object.pMaterial != nullptr, "Render object has no material");
-			ASSERT_MSG(render_object.pMaterial->pipeline != VK_NULL_HANDLE, "Material has no pipeline");
+			ASSERT_MSG(material.pipeline != VK_NULL_HANDLE, "Material has no pipeline");
 
-			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_object.pMaterial->pipeline);
+			vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline);
+
+			// fmt::println("\t\tMaterial data: {}", (size_t)&render_object.pMaterial->material_data);
+
+			void *material_data_ptr;
+			vmaMapMemory(_allocator, material.uniform_buffer.allocation, &material_data_ptr);
+			memcpy(material_data_ptr, &material.uniforms, sizeof(GPUMaterialUniforms));
+			vmaUnmapMemory(_allocator, material.uniform_buffer.allocation);
+
+			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, material.pipeline_layout, 1, 1, &material.descriptor_set, 0, nullptr);
+			_metrics.pipeline_bind_calls++;
+
 
 			uint32_t dynamic_offset = frame_idx * _pad_uniform_buffer_size(sizeof(GPUSceneData));
 			vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, render_object.pMaterial->pipeline_layout, 0, 1, &frame_data.global_descriptors, 1, &dynamic_offset);
-
-			pLast_material = render_object.pMaterial;
-
 			_metrics.pipeline_bind_calls++;
+
+			pLast_material = &material;
 			// fmt::println("\t\tBound pipeline");
 		}
 
@@ -887,12 +943,12 @@ void Vulkun::draw() {
 
 	VK_CHECK(vkBeginCommandBuffer(frame_data.command_buffer, &cmd_begin_info));
 
-	VkClearValue clear_color;
-	float flash = abs(sin(_frame_number / 360.0f));
-	clear_color.color = { { 1.0f - flash, flash, flash * 0.5f, 1.0f } };
-	for (size_t i = 0; i < 3; i++) {
-		clear_color.color.float32[i] *= 0.2f;
-	}
+	VkClearValue clear_color{ .color = { { 0.0f, 0.0f, 0.0f, 1.0f } } };
+	// float flash = abs(sin(_frame_number / 360.0f));
+	// clear_color.color = { { 1.0f - flash, flash, flash * 0.5f, 1.0f } };
+	// for (size_t i = 0; i < 3; i++) {
+	// 	clear_color.color.float32[i] *= 0.2f;
+	// }
 
 	VkClearValue clear_depth;
 	clear_depth.depthStencil.depth = 1.0f;
@@ -974,20 +1030,47 @@ void Vulkun::cleanup() {
 	_deletion_queue.flush();
 }
 
-Material *Vulkun::create_material(const std::string &name, const std::string &vert_name, const std::string &frag_name, VkPipelineLayout pipeline_layout) {
+Material *Vulkun::create_material(const std::string &name, const std::string &vert_name, const std::string &frag_name, VkPipelineLayout pipeline_layout, const VkDescriptorSetLayout *pDescriptor_layout) {
 	// TODO: How about inlining the _create_vert_frag_pipeline method?
 	VkPipeline pipeline = _create_vert_frag_pipeline(vert_name, frag_name, pipeline_layout);
-	return create_material(name, pipeline, pipeline_layout);
+	return create_material(name, pipeline, pipeline_layout, pDescriptor_layout);
 }
 
-Material *Vulkun::create_material(const std::string &name, VkPipeline pipeline, VkPipelineLayout pipeline_layout) {
+Material *Vulkun::create_material(const std::string &name, VkPipeline pipeline, VkPipelineLayout pipeline_layout, const VkDescriptorSetLayout *pDescriptor_layout) {
 	Material material = {
 		.pipeline = pipeline,
 		.pipeline_layout = pipeline_layout,
+		.pDescriptor_set_layout = pDescriptor_layout,
+		.uniform_buffer = _create_buffer(_pad_uniform_buffer_size(sizeof(GPUMaterialUniforms)), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU)
 	};
+
+	VkDescriptorSetAllocateInfo alloc_info{};
+	alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+	alloc_info.pNext = nullptr;
+	alloc_info.descriptorPool = _descriptor_pool;
+	alloc_info.descriptorSetCount = 1;
+	alloc_info.pSetLayouts = pDescriptor_layout;
+
+	VK_CHECK(vkAllocateDescriptorSets(_device, &alloc_info, &material.descriptor_set));
+
+	VkDescriptorBufferInfo material_uniform_buffer_info{};
+	material_uniform_buffer_info.buffer = material.uniform_buffer.buffer;
+	material_uniform_buffer_info.offset = 0;
+	material_uniform_buffer_info.range = _pad_uniform_buffer_size(sizeof(GPUMaterialUniforms));
+
+	std::array set_writes{
+		vkinit::write_descriptor_buffer(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, material.descriptor_set, &material_uniform_buffer_info, 0)
+	};
+
+	vkUpdateDescriptorSets(_device, set_writes.size(), set_writes.data(), 0, nullptr);
+
+	_deletion_queue.push_function([=, this]() {
+		vmaDestroyBuffer(_allocator, material.uniform_buffer.buffer, material.uniform_buffer.allocation);
+	});
+
 	_materials[name] = material;
 
-	fmt::println("Created material with name: '{}'", name);
+	fmt::println("🎨 Created material with name: '{}'", name);
 
 	return &_materials[name];
 }

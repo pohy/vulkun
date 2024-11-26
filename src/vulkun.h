@@ -146,8 +146,8 @@ public:
 
 	uint32_t frame_number() const { return _frame_number; }
 
-	Material *create_material(const std::string &name, const std::string &vert_name, const std::string &frag_name, VkPipelineLayout pipeline_layout);
-	Material *create_material(const std::string &name, VkPipeline pipeline, VkPipelineLayout pipeline_layout);
+	Material *create_material(const std::string &name, const std::string &vert_name, const std::string &frag_name, VkPipelineLayout pipeline_layout, const VkDescriptorSetLayout *pDescriptor_layout);
+	Material *create_material(const std::string &name, VkPipeline pipeline, VkPipelineLayout pipeline_layout, const VkDescriptorSetLayout *pDescriptor_layout);
 	Material *get_material(const std::string &name);
 	Mesh *get_mesh(const std::string &name);
 };

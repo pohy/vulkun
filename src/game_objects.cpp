@@ -1,4 +1,5 @@
 #include "game_objects.h"
+#include "material.h"
 
 Monkey::Monkey(Vulkun &vulkun, uint32_t offset) :
 		pVulkun(&vulkun), _offset(offset) {
@@ -29,10 +30,13 @@ Triangle::Triangle(Vulkun &vulkun) {
 }
 
 Impreza::Impreza(Vulkun &vulkun) {
+	pVulkun = &vulkun;
 	render_object.pMesh = vulkun.get_mesh(MeshName::Impreza);
-	render_object.pMaterial = vulkun.get_material(MaterialName::Lit);
+	render_object.pMaterial = vulkun.get_material(MaterialName::Impreza);
+	render_object.pMaterial->uniforms.albedo_color = glm::vec4{ 0.1f, 0.1f, 0.9f, 1.0f };
 }
 
 void Impreza::update(float delta_time) {
 	transform.rotate(-delta_time * 0.3f, glm::vec3(0, 1, 0));
+	render_object.pMaterial->uniforms.albedo_color.x = abs(sin(pVulkun->frame_number() / 100.0f));
 }

@@ -50,6 +50,9 @@ public:
 };
 
 class Impreza : public IGameObject {
+private:
+	Vulkun *pVulkun;
+
 public:
 	Impreza(Vulkun &vulkun);
 
