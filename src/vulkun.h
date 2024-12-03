@@ -73,7 +73,7 @@ private:
 	AllocatedBuffer _scene_data_buffer; // Date for all FRAME_OVERLAP be stored in the single buffer
 
 	VkExtent2D _window_extent = { 1600, 900 };
-	struct SDL_Window *_window = nullptr;
+	struct std::unique_ptr<SDL_Window, decltype(&SDL_DestroyWindow)> _window;
 
 	DeletionQueue _deletion_queue;
 
@@ -135,7 +135,8 @@ private:
 	FrameData &_get_current_frame_data();
 
 public:
-	static Vulkun &get_singleton();
+	Vulkun() :
+			_window(nullptr, SDL_DestroyWindow) {}
 
 	void init();
 	void run();

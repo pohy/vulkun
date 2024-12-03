@@ -17,6 +17,7 @@
 #include <VkBootstrap.h>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/string_cast.hpp>
@@ -28,17 +29,8 @@
 #include <thread>
 
 constexpr bool enable_validation_layers = true;
-Vulkun *singleton_instance = nullptr;
-
-Vulkun &Vulkun::get_singleton() {
-	return *singleton_instance;
-}
 
 void Vulkun::init() {
-	// TODO: I don't actually understand why do we initialize the instance here, instead of the `get_singleton` method.
-	assert(singleton_instance == nullptr);
-	singleton_instance = this;
-
 	fmt::println("PushConstants size: {}", sizeof(PushConstants));
 
 	// Initialize SDL
@@ -46,13 +38,10 @@ void Vulkun::init() {
 	SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 
 	SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN);
-	_window = SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, window_flags);
+	_window.reset(
+			SDL_CreateWindow(APP_NAME, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, _window_extent.width, _window_extent.height, window_flags));
 
-	_mouse.on_window_moved(SDL_GetWindowDisplayIndex(_window));
-
-	_deletion_queue.push_function([=, this]() {
-		SDL_DestroyWindow(_window);
-	});
+	_mouse.on_window_moved(SDL_GetWindowDisplayIndex(_window.get()));
 
 	_is_initialized = _init_vulkan();
 	_is_initialized = _init_swapchain();
@@ -95,7 +84,7 @@ bool Vulkun::_init_vulkan() {
 		vkDestroyInstance(_instance, nullptr);
 	});
 
-	if (!SDL_Vulkan_CreateSurface(_window, _instance, &_surface)) {
+	if (!SDL_Vulkan_CreateSurface(_window.get(), _instance, &_surface)) {
 		fmt::print(stderr, "Failed to create Vulkan surface.\n");
 		return false;
 	}
@@ -423,7 +412,7 @@ bool Vulkun::_init_descriptors() {
 
 bool Vulkun::_init_imgui() {
 	ImGui::CreateContext();
-	ImGui_ImplSDL2_InitForVulkan(_window);
+	ImGui_ImplSDL2_InitForVulkan(_window.get());
 
 	ImGui_ImplVulkan_InitInfo imgui_vulkan_init_info{};
 	imgui_vulkan_init_info.Instance = _instance;
@@ -687,7 +676,7 @@ void Vulkun::run() {
 					_is_rendering_paused = false;
 				}
 				if (event.window.event == SDL_WINDOWEVENT_MOVED) {
-					_mouse.on_window_moved(SDL_GetWindowDisplayIndex(_window));
+					_mouse.on_window_moved(SDL_GetWindowDisplayIndex(_window.get()));
 				}
 			}
 
@@ -1015,8 +1004,6 @@ void Vulkun::draw() {
 }
 
 void Vulkun::cleanup() {
-	singleton_instance = nullptr;
-
 	if (!_is_initialized) {
 		return;
 	}
